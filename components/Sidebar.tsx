@@ -22,10 +22,13 @@ import { groupDateLabel } from "@/lib/history";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
 import { useChatStore } from "@/modules/chat/useChatStore";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
 
 export function Sidebar() {
+  const insets = useSafeAreaInsets();
   const { isSidebarOpen, setSidebarOpen } = useUIStore();
   const threads = useChatStore((state) => state.threads);
   const activeThreadId = useChatStore((state) => state.activeThreadId);
@@ -81,13 +84,25 @@ export function Sidebar() {
   }
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents={isSidebarOpen ? "auto" : "none"}>
+    <View
+      style={StyleSheet.absoluteFill}
+      pointerEvents={isSidebarOpen ? "auto" : "none"}
+    >
       <Animated.View style={[styles.overlay, overlayStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
       </Animated.View>
 
-      <Animated.View style={[styles.sidebar, sidebarStyle]}>
-        <View className="flex-1 bg-white pt-12">
+      <Animated.View
+        style={[
+          styles.sidebar,
+          sidebarStyle,
+          {
+            top: insets.top,
+            bottom: insets.bottom,
+          },
+        ]}
+      >
+        <View className="flex-1 bg-white py-4">
           <View className="mb-6 px-4">
             <TouchableOpacity
               activeOpacity={0.8}
@@ -130,12 +145,13 @@ export function Sidebar() {
 
             {threads.length === 0 ? (
               <Text className="text-sm leading-6 text-slate-400">
-                Your conversation history will appear here after the first message.
+                Your conversation history will appear here after the first
+                message.
               </Text>
             ) : null}
           </ScrollView>
 
-          <View className="flex-row items-center justify-between border-t border-slate-100 p-4 pb-10">
+          <View className="flex-row items-center justify-between border-t border-slate-100 p-4">
             <TouchableOpacity
               activeOpacity={0.8}
               className="flex-1 flex-row items-center"
@@ -158,7 +174,11 @@ export function Sidebar() {
                 </Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity activeOpacity={0.7} className="ml-2" onPress={handleLogout}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              className="ml-2"
+              onPress={handleLogout}
+            >
               <LogOut size={20} color="#94A3B8" strokeWidth={2} />
             </TouchableOpacity>
           </View>
@@ -206,8 +226,6 @@ const styles = StyleSheet.create({
   sidebar: {
     position: "absolute",
     left: 0,
-    top: 0,
-    bottom: 0,
     width: SIDEBAR_WIDTH,
     backgroundColor: "white",
     shadowColor: "#000",

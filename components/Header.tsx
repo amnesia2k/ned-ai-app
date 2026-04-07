@@ -4,11 +4,14 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { useUIStore } from "@/hooks/useUIStore";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 export function Header({ onNewChat }: { onNewChat?: () => void }) {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <TouchableOpacity onPress={toggleSidebar} activeOpacity={0.7}>
         <Menu size={24} color="#374151" strokeWidth={2} />
       </TouchableOpacity>
@@ -27,7 +30,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 16,
     backgroundColor: "white",
   },

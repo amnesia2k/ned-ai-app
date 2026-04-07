@@ -48,6 +48,7 @@ export type ChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;
   createdAt: string;
+  deliveryState?: "pending" | "failed";
   grounded?: boolean;
   usedGeneralKnowledge?: boolean;
   sources?: MessageSource[];

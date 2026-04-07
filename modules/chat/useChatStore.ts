@@ -16,6 +16,7 @@ type ChatStore = {
   status: "idle" | "loading" | "sending" | "error";
   errorMessage: string | null;
   threads: ChatThread[];
+  draftMessages: ChatMessage[];
   messagesByChatId: Record<string, ChatMessage[]>;
   loadedChatIds: string[];
   loadChats: () => Promise<void>;
@@ -62,6 +63,38 @@ function mergeMessages(
   );
 }
 
+function removeMessagesById(messages: ChatMessage[], messageIds: string[]) {
+  const ids = new Set(messageIds);
+  return messages.filter((message) => !ids.has(message.id));
+}
+
+function replaceMessageDeliveryState(
+  messages: ChatMessage[],
+  messageId: string,
+  deliveryState: ChatMessage["deliveryState"],
+) {
+  return messages.map((message) =>
+    message.id === messageId ? { ...message, deliveryState } : message,
+  );
+}
+
+function createOptimisticMessage({
+  id,
+  chatId,
+  role,
+  content,
+  createdAt,
+}: Pick<ChatMessage, "id" | "chatId" | "role" | "content" | "createdAt">) {
+  return {
+    id,
+    chatId,
+    role,
+    content,
+    createdAt,
+    deliveryState: "pending" as const,
+  };
+}
+
 function buildChatErrorMessage(error: unknown) {
   if (isApiClientError(error)) {
     return error.message;
@@ -96,6 +129,7 @@ export const useChatStore = create<ChatStore>()(
       status: "idle",
       errorMessage: null,
       threads: [],
+      draftMessages: [],
       messagesByChatId: {},
       loadedChatIds: [],
       loadChats: async () => {
@@ -120,6 +154,7 @@ export const useChatStore = create<ChatStore>()(
           set({
             threads: response.chats,
             activeThreadId: nextActiveThreadId,
+            draftMessages: nextActiveThreadId ? [] : get().draftMessages,
             status: "idle",
             errorMessage: null,
           });
@@ -146,6 +181,7 @@ export const useChatStore = create<ChatStore>()(
         set({
           status: "loading",
           errorMessage: null,
+          draftMessages: [],
         });
         useSyncStore.getState().startSync();
 
@@ -182,6 +218,7 @@ export const useChatStore = create<ChatStore>()(
         set({
           activeThreadId: threadId,
           errorMessage: null,
+          draftMessages: [],
         });
 
         if (!get().loadedChatIds.includes(threadId)) {
@@ -191,6 +228,7 @@ export const useChatStore = create<ChatStore>()(
       startFreshChat: () =>
         set({
           activeThreadId: null,
+          draftMessages: [],
           errorMessage: null,
           status: "idle",
         }),
@@ -201,27 +239,81 @@ export const useChatStore = create<ChatStore>()(
           return;
         }
 
-        set({
-          status: "sending",
-          errorMessage: null,
+        const activeThreadId = get().activeThreadId;
+        const optimisticChatId = activeThreadId ?? "__draft__";
+        const timestamp = Date.now();
+        const optimisticUserMessage = createOptimisticMessage({
+          id: `temp-user-${timestamp}`,
+          chatId: optimisticChatId,
+          role: "user",
+          content: trimmed,
+          createdAt: new Date(timestamp).toISOString(),
+        });
+        const optimisticAssistantMessage = createOptimisticMessage({
+          id: `temp-assistant-${timestamp}`,
+          chatId: optimisticChatId,
+          role: "assistant",
+          content: "",
+          createdAt: new Date(timestamp + 1).toISOString(),
+        });
+
+        set((state) => {
+          if (activeThreadId) {
+            const existingMessages = state.messagesByChatId[activeThreadId] ?? [];
+
+            return {
+              status: "sending" as const,
+              errorMessage: null,
+              messagesByChatId: {
+                ...state.messagesByChatId,
+                [activeThreadId]: mergeMessages(existingMessages, [
+                  optimisticUserMessage,
+                  optimisticAssistantMessage,
+                ]),
+              },
+            };
+          }
+
+          return {
+            status: "sending" as const,
+            errorMessage: null,
+            draftMessages: mergeMessages(state.draftMessages, [
+              optimisticUserMessage,
+              optimisticAssistantMessage,
+            ]),
+          };
         });
         useSyncStore.getState().startSync();
 
         try {
           const token = requireAccessToken();
-          const activeThreadId = get().activeThreadId;
           const response = await ChatApi.sendMessage(token, {
             ...(activeThreadId ? { chatId: activeThreadId } : {}),
             content: trimmed,
           });
 
           set((state) => {
-            const existingMessages =
-              state.messagesByChatId[response.chat.id] ?? [];
+            const optimisticMessageIds = [
+              optimisticUserMessage.id,
+              optimisticAssistantMessage.id,
+            ];
+            const remainingDraftMessages = removeMessagesById(
+              state.draftMessages,
+              optimisticMessageIds,
+            );
+            const existingMessages = activeThreadId
+              ? removeMessagesById(
+                  state.messagesByChatId[response.chat.id] ??
+                    state.messagesByChatId[activeThreadId] ??
+                    [],
+                  optimisticMessageIds,
+                )
+              : remainingDraftMessages;
 
             return {
               activeThreadId: response.chat.id,
               threads: mergeThread(state.threads, response.chat),
+              draftMessages: [],
               messagesByChatId: {
                 ...state.messagesByChatId,
                 [response.chat.id]: mergeMessages(existingMessages, [
@@ -241,9 +333,42 @@ export const useChatStore = create<ChatStore>()(
         } catch (error) {
           const errorMessage = handleChatError(error);
 
-          set({
-            status: "error",
-            errorMessage,
+          set((state) => {
+            if (activeThreadId) {
+              const existingMessages = state.messagesByChatId[activeThreadId] ?? [];
+              const withoutAssistantPlaceholder = removeMessagesById(
+                existingMessages,
+                [optimisticAssistantMessage.id],
+              );
+
+              return {
+                status: "error" as const,
+                errorMessage,
+                messagesByChatId: {
+                  ...state.messagesByChatId,
+                  [activeThreadId]: replaceMessageDeliveryState(
+                    withoutAssistantPlaceholder,
+                    optimisticUserMessage.id,
+                    "failed",
+                  ),
+                },
+              };
+            }
+
+            const withoutAssistantPlaceholder = removeMessagesById(
+              state.draftMessages,
+              [optimisticAssistantMessage.id],
+            );
+
+            return {
+              status: "error" as const,
+              errorMessage,
+              draftMessages: replaceMessageDeliveryState(
+                withoutAssistantPlaceholder,
+                optimisticUserMessage.id,
+                "failed",
+              ),
+            };
           });
           useSyncStore.getState().markError(errorMessage);
           throw error;
@@ -253,7 +378,7 @@ export const useChatStore = create<ChatStore>()(
         const threadId = get().activeThreadId;
 
         if (!threadId) {
-          return [];
+          return get().draftMessages;
         }
 
         return get().messagesByChatId[threadId] ?? [];
@@ -265,6 +390,7 @@ export const useChatStore = create<ChatStore>()(
           status: "idle",
           errorMessage: null,
           threads: [],
+          draftMessages: [],
           messagesByChatId: {},
           loadedChatIds: [],
         });

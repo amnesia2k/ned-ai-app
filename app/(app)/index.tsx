@@ -22,7 +22,6 @@ import { useChatStore } from "@/modules/chat/useChatStore";
 
 export default function HomeScreen() {
   const threads = useChatStore((state) => state.threads);
-  const activeThreadId = useChatStore((state) => state.activeThreadId);
   const status = useChatStore((state) => state.status);
   const errorMessage = useChatStore((state) => state.errorMessage);
   const messages = useChatStore(
@@ -31,7 +30,7 @@ export default function HomeScreen() {
   const loadChats = useChatStore((state) => state.loadChats);
   const startFreshChat = useChatStore((state) => state.startFreshChat);
   const sendMessage = useChatStore((state) => state.sendMessage);
-  const hasConversation = Boolean(activeThreadId && messages.length > 0);
+  const hasConversation = messages.length > 0;
   const isLoading = status === "loading";
   const isSending = status === "sending";
 
@@ -133,7 +132,7 @@ export default function HomeScreen() {
                 errorMessage
                   ? errorMessage
                   : isSending
-                    ? "Waiting for NedAI to respond..."
+                    ? "NedAI is replying..."
                     : isLoading
                       ? "Syncing chats from the server..."
                       : "Messages are sent directly to the server."
@@ -162,14 +161,13 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    paddingHorizontal: 20,
     paddingBottom: 8,
   },
   centerArea: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: 16,
   },
   logoContainer: {
     width: 100,
@@ -204,7 +202,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   chipsContent: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 0,
   },
   loadingState: {
     flex: 1,
