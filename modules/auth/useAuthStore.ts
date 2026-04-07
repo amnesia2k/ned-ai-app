@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-import { isApiClientError } from "@/lib/http";
+import { ApiClientError, isApiClientError } from "@/lib/http";
 import * as AuthApi from "@/modules/auth/auth.api";
 import type { AuthState, AuthUser } from "@/modules/contracts";
 
@@ -13,6 +13,15 @@ type LoginCredentials = {
 
 type SignupCredentials = LoginCredentials & {
   name: string;
+};
+
+type UpdateProfilePayload = {
+  name: string;
+};
+
+type ChangePasswordPayload = {
+  oldPassword: string;
+  newPassword: string;
 };
 
 type AuthStoreStatus = "idle" | "loading" | "authenticated" | "error";
@@ -29,6 +38,8 @@ type AuthStore = AuthState & {
   bootstrapSession: () => Promise<void>;
   signIn: (credentials: LoginCredentials) => Promise<void>;
   signUp: (credentials: SignupCredentials) => Promise<void>;
+  updateProfile: (payload: UpdateProfilePayload) => Promise<AuthUser>;
+  changePassword: (payload: ChangePasswordPayload) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   markHydrated: () => void;
@@ -77,6 +88,14 @@ function clearSession(
     status: "idle",
     errorMessage: null,
   });
+}
+
+function getRequiredAccessToken(token: string | null) {
+  if (!token) {
+    throw new ApiClientError(401, "Unauthorized");
+  }
+
+  return token;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -171,6 +190,67 @@ export const useAuthStore = create<AuthStore>()(
             errorMessage: buildAuthErrorMessage(error),
             bootstrapped: true,
           });
+          throw error;
+        }
+      },
+      updateProfile: async (payload) => {
+        set({
+          status: "loading",
+          errorMessage: null,
+        });
+
+        try {
+          const token = getRequiredAccessToken(get().accessToken);
+          const response = await AuthApi.updateCurrentUser(token, {
+            name: payload.name.trim(),
+          });
+
+          set({
+            user: response.user,
+            isAuthenticated: true,
+            status: "authenticated",
+            errorMessage: null,
+          });
+
+          return response.user;
+        } catch (error) {
+          if (isApiClientError(error) && error.status === 401) {
+            clearSession(set);
+          } else {
+            set({
+              status: "error",
+              errorMessage: buildAuthErrorMessage(error),
+            });
+          }
+
+          throw error;
+        }
+      },
+      changePassword: async (payload) => {
+        set({
+          status: "loading",
+          errorMessage: null,
+        });
+
+        try {
+          const token = getRequiredAccessToken(get().accessToken);
+
+          await AuthApi.changeCurrentPassword(token, payload);
+
+          set({
+            status: "authenticated",
+            errorMessage: null,
+          });
+        } catch (error) {
+          if (isApiClientError(error) && error.status === 401) {
+            clearSession(set);
+          } else {
+            set({
+              status: "error",
+              errorMessage: buildAuthErrorMessage(error),
+            });
+          }
+
           throw error;
         }
       },

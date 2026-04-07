@@ -1,130 +1,156 @@
-import Constants from "expo-constants";
-import { router } from "expo-router";
-import { ChevronLeft, LogOut } from "lucide-react-native";
-import React from "react";
-import { Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Href, router } from "expo-router";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Info,
+  Lock,
+  LogOut,
+  Moon,
+  Shield,
+  Smartphone,
+} from "lucide-react-native";
+import React, { useState } from "react";
+import { Image, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuthStore } from "@/modules/auth/useAuthStore";
-import { useSyncStore } from "@/modules/sync/useSyncStore";
 
 export default function SettingsScreen() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const sync = useSyncStore((state) => ({
-    status: state.status,
-    lastSyncedAt: state.lastSyncedAt,
-    errorMessage: state.errorMessage,
-    chatCount: state.chatCount,
-  }));
-  const scheme = Constants.expoConfig?.scheme;
-  const schemeValue = Array.isArray(scheme)
-    ? scheme[0] || "nedaiapp"
-    : scheme || "nedaiapp";
+
+  const [darkMode, setDarkMode] = useState(false);
+  const [hapticFeedback, setHapticFeedback] = useState(true);
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/(auth)/login");
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingHorizontal: 20,
-          paddingVertical: 16,
-        }}
-      >
-        <Pressable onPress={() => router.back()}>
-          <ChevronLeft size={24} color="#0F172A" />
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-5 py-4 border-b border-slate-50">
+        <Pressable onPress={() => router.back()} className="p-1">
+          <ArrowLeft size={24} color="#3B82F6" />
         </Pressable>
-        <Text style={{ color: "#0F172A", fontSize: 18, fontWeight: "700" }}>
-          Settings
-        </Text>
-        <View style={{ width: 24 }} />
+        <Text className="text-lg font-bold text-slate-900">Settings</Text>
+        <View style={{ width: 32 }} />
       </View>
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32, gap: 24 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={{ alignItems: "center", gap: 10, paddingVertical: 12 }}>
-          <View
-            style={{
-              width: 88,
-              height: 88,
-              borderRadius: 44,
-              backgroundColor: "#DBEAFE",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Text style={{ color: "#1D4ED8", fontSize: 28, fontWeight: "700" }}>
-              {(user?.name || user?.email || "N").slice(0, 1).toUpperCase()}
-            </Text>
+        {/* Profile Section */}
+        <View className="items-center py-8">
+          <View className="relative">
+            <View className="h-24 w-24 rounded-full border-2 border-slate-100 p-1">
+              <View className="h-full w-full overflow-hidden rounded-full bg-slate-100 items-center justify-center">
+                {user?.image ? (
+                  <Image
+                    source={{ uri: user.image }}
+                    className="h-full w-full"
+                  />
+                ) : (
+                  <Text className="text-3xl font-bold text-slate-400">
+                    {(user?.name || "N").slice(0, 1).toUpperCase()}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <View className="absolute bottom-0 right-0 h-7 w-7 items-center justify-center rounded-full bg-blue-500 border-2 border-white">
+              <Pencil size={14} color="white" />
+            </View>
           </View>
-          <Text style={{ color: "#0F172A", fontSize: 22, fontWeight: "700" }}>
-            {user?.name || "NedAI user"}
+
+          <Text className="mt-4 text-xl font-bold text-slate-900">
+            {user?.name || "Alex Rivera"}
           </Text>
-          <Text style={{ color: "#64748B", fontSize: 15 }}>
-            {user?.email || "No email available"}
+          <Text className="text-sm text-slate-500">
+            {user?.email || "alex.rivera@ai-assistant.io"}
           </Text>
+
+          <Pressable
+            onPress={() => router.push("/(app)/edit-profile" as Href)}
+            className="mt-5 rounded-full border border-slate-200 px-6 py-2"
+          >
+            <Text className="text-sm font-bold text-slate-900">
+              Edit Profile
+            </Text>
+          </Pressable>
         </View>
 
+        {/* Account Section */}
         <Section title="Account">
-          <SettingRow label="Email" value={user?.email || "Not available"} />
-          <SettingRow label="Role" value={user?.role || "Not available"} />
           <SettingRow
-            label="Institution"
-            value={user?.institution || "Not available"}
-          />
-          <SettingRow label="Session mode" value="Server-backed session" />
-        </Section>
-
-        <Section title="Sync">
-          <SettingRow label="Status" value={sync.status} />
-          <SettingRow label="Chats loaded" value={String(sync.chatCount)} />
-          <SettingRow
-            label="Last synced"
-            value={sync.lastSyncedAt || "Not synced yet"}
+            icon={<Lock size={20} color="#3B82F6" />}
+            label="Change Password"
+            onPress={() => router.push("/(app)/change-password" as Href)}
           />
           <SettingRow
-            label="Last sync error"
-            value={sync.errorMessage || "No sync errors"}
+            icon={<Shield size={20} color="#3B82F6" />}
+            label="Data & Privacy"
+            onPress={() => {}}
           />
         </Section>
 
-        <Section title="App">
+        {/* App Settings Section */}
+        <Section title="App Settings">
           <SettingRow
+            icon={<Moon size={20} color="#3B82F6" />}
+            label="Dark Mode"
+            rightElement={
+              <Switch
+                value={darkMode}
+                onValueChange={setDarkMode}
+                trackColor={{ false: "#E2E8F0", true: "#3B82F6" }}
+                thumbColor="#FFFFFF"
+              />
+            }
+          />
+          <SettingRow
+            icon={<Smartphone size={20} color="#3B82F6" />}
+            label="Haptic Feedback"
+            rightElement={
+              <Switch
+                value={hapticFeedback}
+                onValueChange={setHapticFeedback}
+                trackColor={{ false: "#E2E8F0", true: "#3B82F6" }}
+                thumbColor="#FFFFFF"
+              />
+            }
+          />
+        </Section>
+
+        {/* About Section */}
+        <Section title="About">
+          <SettingRow
+            icon={<Info size={20} color="#3B82F6" />}
             label="Version"
-            value={Constants.expoConfig?.version || "1.0.0"}
+            rightElement={
+              <Text className="text-sm text-slate-500">2.4.0 (Build 108)</Text>
+            }
           />
-          <SettingRow label="Platform" value={Platform.OS} />
           <SettingRow
-            label="Scheme"
-            value={schemeValue}
+            icon={<ClipboardList size={20} color="#3B82F6" />}
+            label="Terms of Service"
+            onPress={() => {}}
           />
         </Section>
 
-        <Pressable
-          onPress={() => {
-            logout();
-            router.replace("/(auth)/login");
-          }}
-          style={{
-            borderColor: "#FCA5A5",
-            borderWidth: 1,
-            borderRadius: 18,
-            paddingVertical: 16,
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "row",
-            gap: 10,
-          }}
-        >
-          <LogOut size={18} color="#B91C1C" />
-          <Text style={{ color: "#B91C1C", fontSize: 15, fontWeight: "700" }}>
-            Log Out
-          </Text>
-        </Pressable>
+        {/* Log Out Button */}
+        <View className="mt-8 px-5">
+          <Pressable
+            onPress={handleLogout}
+            className="flex-row items-center justify-center rounded-2xl border border-red-100 bg-white py-4 active:bg-red-50"
+          >
+            <LogOut size={20} color="#EF4444" className="mr-2" />
+            <Text className="text-base font-bold text-red-500">Log Out</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -138,49 +164,58 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <View style={{ gap: 10 }}>
-      <Text
-        style={{
-          color: "#64748B",
-          fontSize: 12,
-          fontWeight: "700",
-          textTransform: "uppercase",
-          letterSpacing: 0.5,
-        }}
-      >
+    <View className="mt-6 px-5">
+      <Text className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">
         {title}
       </Text>
-      <View
-        style={{
-          backgroundColor: "#F8FAFC",
-          borderRadius: 20,
-          borderWidth: 1,
-          borderColor: "#E2E8F0",
-          overflow: "hidden",
-        }}
-      >
+      <View className="overflow-hidden rounded-2xl bg-slate-50/50 border border-slate-100">
         {children}
       </View>
     </View>
   );
 }
 
-function SettingRow({ label, value }: { label: string; value: string }) {
+function SettingRow({
+  icon,
+  label,
+  value,
+  onPress,
+  rightElement,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value?: string;
+  onPress?: () => void;
+  rightElement?: React.ReactNode;
+}) {
+  const Container = onPress ? Pressable : View;
+
   return (
-    <View
-      style={{
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderBottomColor: "#E2E8F0",
-        borderBottomWidth: 1,
-      }}
+    <Container
+      onPress={onPress}
+      className={`flex-row items-center justify-between p-4 ${onPress ? "active:bg-slate-100" : ""}`}
     >
-      <Text style={{ color: "#0F172A", fontSize: 14, fontWeight: "600" }}>
-        {label}
-      </Text>
-      <Text style={{ color: "#64748B", fontSize: 13, marginTop: 4, lineHeight: 19 }}>
-        {value}
-      </Text>
-    </View>
+      <View className="flex-row items-center">
+        <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-blue-50/50">
+          {icon}
+        </View>
+        <Text className="text-base font-medium text-slate-700">{label}</Text>
+      </View>
+      <View className="flex-row items-center">
+        {value && <Text className="mr-2 text-sm text-slate-500">{value}</Text>}
+        {rightElement}
+        {onPress && !rightElement && <ChevronRight size={20} color="#CBD5E1" />}
+      </View>
+    </Container>
   );
 }
+
+const Pencil = ({ size, color }: { size: number; color: string }) => (
+  <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+    <Text style={{ fontSize: size, color }}>✎</Text>
+  </View>
+);
+
+const ArrowLeft = ({ size, color }: { size: number; color: string }) => (
+  <ChevronLeft size={size} color={color} />
+);

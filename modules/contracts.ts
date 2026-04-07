@@ -16,6 +16,7 @@ export type AuthUser = {
   email: string;
   role: string;
   institution: string | null;
+  image?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -62,6 +63,12 @@ export type ServerAuthResponse = {
 export type ServerCurrentUserResponse = {
   user: AuthUser;
 };
+
+export type ServerUpdateCurrentUserResponse = {
+  user: AuthUser;
+};
+
+export type ServerChangePasswordResponse = Record<string, never>;
 
 export type ServerListChatsResponse = {
   chats: ChatThread[];

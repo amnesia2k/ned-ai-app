@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { LogOut, MessageSquare, Plus } from "lucide-react-native";
+import { Href, router } from "expo-router";
+import { LogOut, MessageSquare, MoreVertical, Plus, Settings } from "lucide-react-native";
 import React, { useEffect } from "react";
 import {
   Dimensions,
@@ -36,6 +36,7 @@ export function Sidebar() {
   const startFreshChat = useChatStore((state) => state.startFreshChat);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const translateX = useSharedValue(-SIDEBAR_WIDTH);
   const opacity = useSharedValue(0);
 
@@ -174,13 +175,41 @@ export function Sidebar() {
                 </Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              className="ml-2"
-              onPress={handleLogout}
-            >
-              <LogOut size={20} color="#94A3B8" strokeWidth={2} />
-            </TouchableOpacity>
+            <View className="relative">
+              <TouchableOpacity
+                activeOpacity={0.7}
+                className="ml-2 p-2"
+                onPress={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                <MoreVertical size={20} color="#94A3B8" strokeWidth={2} />
+              </TouchableOpacity>
+
+              {isMenuOpen && (
+                <View 
+                  className="absolute bottom-12 right-0 w-40 rounded-xl bg-white border border-slate-100 shadow-xl overflow-hidden"
+                  style={{ zIndex: 50 }}
+                >
+                  <TouchableOpacity
+                    className="flex-row items-center p-3 active:bg-slate-50 border-b border-slate-50"
+                    onPress={() => {
+                      setIsMenuOpen(false);
+                      handleClose();
+                      router.push("/(app)/settings" as Href);
+                    }}
+                  >
+                    <Settings size={18} color="#64748B" className="mr-3" />
+                    <Text className="text-sm font-medium text-slate-700">Settings</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="flex-row items-center p-3 active:bg-slate-50"
+                    onPress={handleLogout}
+                  >
+                    <LogOut size={18} color="#EF4444" className="mr-3" />
+                    <Text className="text-sm font-medium text-red-500">Log Out</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           </View>
         </View>
       </Animated.View>

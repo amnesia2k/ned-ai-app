@@ -147,9 +147,11 @@ export const useChatStore = create<ChatStore>()(
             (thread) => thread.id === currentActiveThreadId,
           );
           const nextActiveThreadId =
-            hasActiveThread || !response.chats.length
+            currentActiveThreadId && hasActiveThread
               ? currentActiveThreadId
-              : response.chats[0]?.id ?? null;
+              : currentActiveThreadId === null
+                ? null
+                : response.chats[0]?.id ?? null;
 
           set({
             threads: response.chats,
@@ -402,7 +404,8 @@ export const useChatStore = create<ChatStore>()(
       name: "nedai-chat-store",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        activeThreadId: state.activeThreadId,
+        // We purposefully don't persist activeThreadId to ensure that the app 
+        // starts with a fresh chat session on every cold start.
       }),
       onRehydrateStorage: () => (state) => {
         state?.markHydrated();

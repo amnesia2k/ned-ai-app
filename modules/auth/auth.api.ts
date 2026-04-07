@@ -1,7 +1,9 @@
 import { request } from "@/lib/http";
 import type {
   ServerAuthResponse,
+  ServerChangePasswordResponse,
   ServerCurrentUserResponse,
+  ServerUpdateCurrentUserResponse,
 } from "@/modules/contracts";
 
 type LoginPayload = {
@@ -11,6 +13,15 @@ type LoginPayload = {
 
 type RegisterPayload = LoginPayload & {
   name: string;
+};
+
+type UpdateProfilePayload = {
+  name: string;
+};
+
+type ChangePasswordPayload = {
+  oldPassword: string;
+  newPassword: string;
 };
 
 export function register(payload: RegisterPayload) {
@@ -30,5 +41,24 @@ export function login(payload: LoginPayload) {
 export function getCurrentUser(token: string) {
   return request<ServerCurrentUserResponse>("/me", {
     token,
+  });
+}
+
+export function updateCurrentUser(token: string, payload: UpdateProfilePayload) {
+  return request<ServerUpdateCurrentUserResponse>("/me", {
+    method: "PATCH",
+    token,
+    body: payload,
+  });
+}
+
+export function changeCurrentPassword(
+  token: string,
+  payload: ChangePasswordPayload,
+) {
+  return request<ServerChangePasswordResponse>("/me/password", {
+    method: "PATCH",
+    token,
+    body: payload,
   });
 }
