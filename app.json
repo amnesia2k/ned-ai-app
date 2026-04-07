@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "nedai-app",
-    "slug": "nedai-app",
+    "name": "NedAI",
+    "slug": "nedai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "nedaiapp",
+    "scheme": "nedai",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
