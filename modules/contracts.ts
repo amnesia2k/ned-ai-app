@@ -92,6 +92,12 @@ export type ChatMessage = {
   sources?: MessageSource[];
 };
 
+export type SendChatMessagePayload = {
+  chatId?: string;
+  content: string;
+  documentId?: string;
+};
+
 export type ServerAuthResponse = {
   accessToken: string;
   user: AuthUser;

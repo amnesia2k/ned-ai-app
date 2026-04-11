@@ -5,7 +5,11 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { isApiClientError } from "@/lib/http";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
 import * as ChatApi from "@/modules/chat/chat.api";
-import type { ChatMessage, ChatThread } from "@/modules/contracts";
+import type {
+  ChatMessage,
+  ChatThread,
+  SendChatMessagePayload,
+} from "@/modules/contracts";
 import { useSyncStore } from "@/modules/sync/useSyncStore";
 
 const EMPTY_ARRAY: any[] = [];
@@ -25,7 +29,7 @@ type ChatStore = {
   loadChatMessages: (chatId: string) => Promise<void>;
   selectThread: (threadId: string) => Promise<void>;
   startFreshChat: () => void;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (payload: SendChatMessagePayload) => Promise<void>;
   clearChatHistory: () => Promise<void>;
   messagesForActiveThread: () => ChatMessage[];
   clearError: () => void;
@@ -237,8 +241,8 @@ export const useChatStore = create<ChatStore>()(
           errorMessage: null,
           status: "idle",
         }),
-      sendMessage: async (content) => {
-        const trimmed = content.trim();
+      sendMessage: async (payload) => {
+        const trimmed = payload.content.trim();
 
         if (!trimmed) {
           return;
@@ -296,6 +300,7 @@ export const useChatStore = create<ChatStore>()(
           const response = await ChatApi.sendMessage(token, {
             ...(activeThreadId ? { chatId: activeThreadId } : {}),
             content: trimmed,
+            ...(payload.documentId ? { documentId: payload.documentId } : {}),
           });
 
           set((state) => {

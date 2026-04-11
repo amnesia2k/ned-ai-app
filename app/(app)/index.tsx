@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { Sparkles } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Keyboard,
   ScrollView,
@@ -13,16 +13,82 @@ import {
 import { useShallow } from "zustand/react/shallow";
 
 import { AppShell } from "@/components/AppShell";
-import { ChatInput } from "@/components/ChatInput";
+import { ChatInput, type HelperTone } from "@/components/ChatInput";
 import { ChatMessageList } from "@/components/ChatMessageList";
 import { KeyboardScreenView } from "@/components/KeyboardScreenView";
 import { SuggestionChip } from "@/components/SuggestionChip";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
+import { isAssessmentPrompt } from "@/modules/chat/assessmentIntent";
 import { useChatStore } from "@/modules/chat/useChatStore";
+import type { DocumentSummary } from "@/modules/contracts";
+import * as DocumentApi from "@/modules/documents/document.api";
 import { useDocumentStore } from "@/modules/documents/useDocumentStore";
+
+const ATTACHMENT_REQUIRED_MESSAGE =
+  "Tag a document with @ before requesting a quiz or exam.";
+
+type HelperState = {
+  text: string;
+  tone: HelperTone;
+} | null;
+
+type ActiveDocumentMention = {
+  query: string;
+  start: number;
+  end: number;
+};
+
+function getActiveDocumentMention(value: string): ActiveDocumentMention | null {
+  const match = /(^|\s)@([^\s@]*)$/.exec(value);
+
+  if (!match) {
+    return null;
+  }
+
+  const mentionText = `@${match[2] ?? ""}`;
+  const start = match.index + match[1].length;
+
+  return {
+    query: match[2] ?? "",
+    start,
+    end: start + mentionText.length,
+  };
+}
+
+function removeDocumentMention(
+  value: string,
+  mention: ActiveDocumentMention | null,
+) {
+  if (!mention) {
+    return value;
+  }
+
+  const before = value.slice(0, mention.start).trimEnd();
+  const after = value.slice(mention.end).trimStart();
+
+  return [before, after].filter(Boolean).join(" ").trim();
+}
+
+function filterDocuments(documents: DocumentSummary[], query: string) {
+  const normalized = query.trim().toLowerCase();
+
+  if (!normalized) {
+    return documents;
+  }
+
+  return documents.filter((document) => {
+    const title = document.title.toLowerCase();
+    const originalFilename = document.originalFilename.toLowerCase();
+
+    return (
+      title.includes(normalized) || originalFilename.includes(normalized)
+    );
+  });
+}
 
 export default function HomeScreen() {
   const token = useAuthStore((state) => state.accessToken);
+  const activeThreadId = useChatStore((state) => state.activeThreadId);
   const threads = useChatStore((state) => state.threads);
   const status = useChatStore((state) => state.status);
   const errorMessage = useChatStore((state) => state.errorMessage);
@@ -32,20 +98,201 @@ export default function HomeScreen() {
   const loadChats = useChatStore((state) => state.loadChats);
   const startFreshChat = useChatStore((state) => state.startFreshChat);
   const sendMessage = useChatStore((state) => state.sendMessage);
+  const documents = useDocumentStore((state) => state.documents);
+  const loadDocuments = useDocumentStore((state) => state.loadDocuments);
   const uploadDocument = useDocumentStore((state) => state.uploadDocument);
-  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [composerText, setComposerText] = useState("");
+  const [selectedDocument, setSelectedDocument] =
+    useState<DocumentSummary | null>(null);
+  const [helperState, setHelperState] = useState<HelperState>(null);
+  const [forceSuggestionOpen, setForceSuggestionOpen] = useState(false);
+  const [remoteSuggestionStatus, setRemoteSuggestionStatus] = useState<
+    "idle" | "loading" | "done"
+  >("idle");
+  const [remoteSuggestionResults, setRemoteSuggestionResults] = useState<
+    DocumentSummary[] | null
+  >(null);
   const hasConversation = messages.length > 0;
   const isLoading = status === "loading";
   const isSending = status === "sending";
+  const activeMention = useMemo(
+    () => getActiveDocumentMention(composerText),
+    [composerText],
+  );
+  const showDocumentSuggestions =
+    forceSuggestionOpen || activeMention !== null;
+  const localSuggestionResults = useMemo(
+    () => filterDocuments(documents, activeMention?.query ?? ""),
+    [activeMention?.query, documents],
+  );
+  const suggestionResults =
+    activeMention?.query.trim() && remoteSuggestionResults !== null
+      ? remoteSuggestionResults
+      : localSuggestionResults;
+  const documentSuggestionStatus = !showDocumentSuggestions
+    ? "idle"
+    : remoteSuggestionStatus === "loading"
+      ? "loading"
+      : suggestionResults.length > 0
+        ? "ready"
+        : "empty";
+  const previousActiveThreadIdRef = useRef<string | null>(activeThreadId);
+  const pendingFreshThreadFromSendRef = useRef(false);
+  const searchRequestIdRef = useRef(0);
 
   useEffect(() => {
     void loadChats();
   }, [loadChats]);
 
-  async function handleSend(text: string) {
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    void loadDocuments(token, { silent: true });
+  }, [loadDocuments, token]);
+
+  useEffect(() => {
+    if (!showDocumentSuggestions) {
+      setRemoteSuggestionStatus("idle");
+      setRemoteSuggestionResults(null);
+      return;
+    }
+
+    const query = activeMention?.query.trim() ?? "";
+
+    if (!token || !query) {
+      setRemoteSuggestionStatus("idle");
+      setRemoteSuggestionResults(null);
+      return;
+    }
+
+    setRemoteSuggestionStatus("idle");
+    setRemoteSuggestionResults(null);
+
+    const requestId = searchRequestIdRef.current + 1;
+    searchRequestIdRef.current = requestId;
+
+    const timeoutId = setTimeout(() => {
+      setRemoteSuggestionStatus("loading");
+
+      void DocumentApi.listDocuments(token, { documentName: query })
+        .then((response) => {
+          if (searchRequestIdRef.current !== requestId) {
+            return;
+          }
+
+          setRemoteSuggestionResults(response.documents);
+          setRemoteSuggestionStatus("done");
+        })
+        .catch(() => {
+          if (searchRequestIdRef.current !== requestId) {
+            return;
+          }
+
+          setRemoteSuggestionResults([]);
+          setRemoteSuggestionStatus("done");
+        });
+    }, 250);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [activeMention?.query, showDocumentSuggestions, token]);
+
+  useEffect(() => {
+    if (!selectedDocument) {
+      return;
+    }
+
+    const nextDocument =
+      documents.find((document) => document.id === selectedDocument.id) ?? null;
+
+    if (!nextDocument) {
+      setSelectedDocument(null);
+      return;
+    }
+
+    if (nextDocument !== selectedDocument) {
+      setSelectedDocument(nextDocument);
+    }
+  }, [documents, selectedDocument]);
+
+  useEffect(() => {
+    if (composerText.trim().length === 0 && activeMention === null) {
+      setForceSuggestionOpen(false);
+    }
+  }, [activeMention, composerText]);
+
+  useEffect(() => {
+    const previousThreadId = previousActiveThreadIdRef.current;
+
+    if (previousThreadId === activeThreadId) {
+      return;
+    }
+
+    if (
+      pendingFreshThreadFromSendRef.current &&
+      previousThreadId === null &&
+      activeThreadId
+    ) {
+      pendingFreshThreadFromSendRef.current = false;
+      previousActiveThreadIdRef.current = activeThreadId;
+      return;
+    }
+
+    pendingFreshThreadFromSendRef.current = false;
+    previousActiveThreadIdRef.current = activeThreadId;
+    setSelectedDocument(null);
+    setForceSuggestionOpen(false);
+    setHelperState(null);
+  }, [activeThreadId]);
+
+  function setComposerDraft(nextValue: string) {
+    setComposerText(nextValue);
+    setHelperState(null);
+    setForceSuggestionOpen((isOpen) =>
+      isOpen && !selectedDocument && isAssessmentPrompt(nextValue.trim()),
+    );
+  }
+
+  function prefillComposer(nextValue: string) {
+    setComposerText(nextValue);
+    setHelperState(null);
+    setForceSuggestionOpen(
+      !selectedDocument && isAssessmentPrompt(nextValue.trim()),
+    );
+  }
+
+  async function handleSend() {
+    const trimmed = composerText.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    if (isAssessmentPrompt(trimmed) && !selectedDocument) {
+      setHelperState({
+        text: ATTACHMENT_REQUIRED_MESSAGE,
+        tone: "error",
+      });
+      setForceSuggestionOpen(true);
+      return;
+    }
+
+    pendingFreshThreadFromSendRef.current = activeThreadId === null;
+
     try {
-      await sendMessage(text);
-    } catch {}
+      await sendMessage({
+        content: trimmed,
+        ...(selectedDocument ? { documentId: selectedDocument.id } : {}),
+      });
+      setComposerText("");
+      setHelperState(null);
+      setForceSuggestionOpen(false);
+    } catch {
+      pendingFreshThreadFromSendRef.current = false;
+    }
   }
 
   async function handleAttach() {
@@ -79,20 +326,51 @@ export default function HomeScreen() {
             ? "application/pdf"
             : "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
       });
-      setUploadMessage(
-        "Upload accepted. NedAI will use the file after processing finishes.",
-      );
+      setHelperState({
+        text: "Upload accepted. Tag it with @ after processing completes.",
+        tone: "success",
+      });
     } catch (error) {
-      setUploadMessage(
-        error instanceof Error ? error.message : "Document upload failed.",
-      );
+      setHelperState({
+        text:
+          error instanceof Error ? error.message : "Document upload failed.",
+        tone: "error",
+      });
     }
   }
+
+  function handleSelectDocument(document: DocumentSummary) {
+    setSelectedDocument(document);
+    setComposerText((currentValue) =>
+      removeDocumentMention(currentValue, getActiveDocumentMention(currentValue)),
+    );
+    setHelperState({
+      text: `${document.title} attached.`,
+      tone: "success",
+    });
+    setForceSuggestionOpen(false);
+  }
+
+  const helperText =
+    helperState?.text ??
+    errorMessage ??
+    (isSending
+      ? "NedAI is replying..."
+      : isLoading
+        ? "Syncing chats from the server..."
+        : "Type @ to tag an uploaded document.");
+  const helperTone =
+    helperState?.tone ?? (errorMessage ? "error" : "neutral");
 
   return (
     <AppShell
       title="Chat"
       onNewChat={() => {
+        pendingFreshThreadFromSendRef.current = false;
+        setComposerText("");
+        setSelectedDocument(null);
+        setHelperState(null);
+        setForceSuggestionOpen(false);
         startFreshChat();
         router.replace("/(app)");
       }}
@@ -133,15 +411,15 @@ export default function HomeScreen() {
                       <SuggestionChip
                         label="Create a chemistry quiz"
                         onPress={() => {
-                          void handleSend(
-                            "Give me a 5-question multiple-choice quiz on my uploaded Chemistry PDF.",
+                          prefillComposer(
+                            "Give me a 5-question multiple-choice quiz",
                           );
                         }}
                       />
                       <SuggestionChip
                         label="Explain a formula"
                         onPress={() => {
-                          void handleSend(
+                          prefillComposer(
                             "Explain the quadratic formula and show the derivation.",
                           );
                         }}
@@ -149,7 +427,7 @@ export default function HomeScreen() {
                       <SuggestionChip
                         label="Use my timetable"
                         onPress={() => {
-                          void handleSend(
+                          prefillComposer(
                             "Use my timetable and suggest what I should focus on today.",
                           );
                         }}
@@ -157,9 +435,7 @@ export default function HomeScreen() {
                       <SuggestionChip
                         label="Summarize my PDF"
                         onPress={() => {
-                          void handleSend(
-                            "Summarize the key concepts from my uploaded document.",
-                          );
+                          prefillComposer("Summarize this document");
                         }}
                       />
                     </ScrollView>
@@ -171,23 +447,25 @@ export default function HomeScreen() {
 
           <ChatInput
             disabled={isSending}
+            value={composerText}
+            onChangeText={setComposerDraft}
             onAttach={() => {
               void handleAttach();
             }}
-            onSend={(message) => {
-              void handleSend(message);
+            onSend={() => {
+              void handleSend();
             }}
-            helperText={
-              uploadMessage
-                ? uploadMessage
-                : errorMessage
-                ? errorMessage
-                : isSending
-                  ? "NedAI is replying..."
-                  : isLoading
-                    ? "Syncing chats from the server..."
-                    : "Messages are sent directly to the server."
-            }
+            helperText={helperText}
+            helperTone={helperTone}
+            selectedDocument={selectedDocument}
+            onClearSelectedDocument={() => {
+              setSelectedDocument(null);
+              setHelperState(null);
+            }}
+            showDocumentSuggestions={showDocumentSuggestions}
+            documentSuggestions={suggestionResults}
+            documentSuggestionStatus={documentSuggestionStatus}
+            onSelectDocument={handleSelectDocument}
           />
         </View>
       </KeyboardScreenView>
@@ -198,10 +476,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-  },
-  activeBanner: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
   },
   body: {
     flex: 1,

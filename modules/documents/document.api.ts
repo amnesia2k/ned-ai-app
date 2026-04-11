@@ -5,8 +5,24 @@ import type {
   ServerReprocessDocumentResponse,
 } from "@/modules/contracts";
 
-export function listDocuments(token: string) {
-  return request<ServerListDocumentsResponse>("/documents", {
+type ListDocumentsOptions = {
+  documentName?: string;
+};
+
+function buildListDocumentsPath(options?: ListDocumentsOptions) {
+  if (!options?.documentName?.trim()) {
+    return "/documents";
+  }
+
+  const searchParams = new URLSearchParams({
+    documentName: options.documentName.trim(),
+  });
+
+  return `/documents?${searchParams.toString()}`;
+}
+
+export function listDocuments(token: string, options?: ListDocumentsOptions) {
+  return request<ServerListDocumentsResponse>(buildListDocumentsPath(options), {
     token,
   });
 }

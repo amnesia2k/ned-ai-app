@@ -1,14 +1,10 @@
 import { request } from "@/lib/http";
 import type {
+  SendChatMessagePayload,
   ServerGetChatMessagesResponse,
   ServerListChatsResponse,
   ServerSendMessageResponse,
 } from "@/modules/contracts";
-
-type SendMessagePayload = {
-  chatId?: string;
-  content: string;
-};
 
 export function listChats(token: string) {
   return request<ServerListChatsResponse>("/chats", {
@@ -22,7 +18,7 @@ export function getChatMessages(token: string, chatId: string) {
   });
 }
 
-export function sendMessage(token: string, payload: SendMessagePayload) {
+export function sendMessage(token: string, payload: SendChatMessagePayload) {
   return request<ServerSendMessageResponse>("/chats/messages", {
     method: "POST",
     token,
