@@ -12,7 +12,8 @@
       "channel": "preview",
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://nedai-server.onrender.com/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://nedai-server.onrender.com/api/v1",
+        "EXPO_PUBLIC_SERVER_URL": "https://nedai-server.onrender.com"
       }
     },
     "production": {

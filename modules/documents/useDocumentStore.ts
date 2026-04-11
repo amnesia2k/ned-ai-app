@@ -4,6 +4,10 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import { isApiClientError } from "@/lib/http";
 import * as DocumentApi from "@/modules/documents/document.api";
+import {
+  DOCUMENT_UPLOAD_ENDPOINT,
+  uploadFiles,
+} from "@/modules/documents/uploadthing";
 import type { DocumentQuota, DocumentSummary } from "@/modules/contracts";
 
 type DocumentStore = {
@@ -18,7 +22,7 @@ type DocumentStore = {
   ) => Promise<void>;
   uploadDocument: (
     token: string,
-    file: { uri: string; name: string; mimeType: string },
+    file: { uri: string; name: string; mimeType: string; file?: File },
   ) => Promise<void>;
   deleteDocument: (
     token: string,
@@ -35,7 +39,52 @@ function getErrorMessage(error: unknown) {
     return error.message;
   }
 
+  if (error instanceof Error) {
+    return error.message;
+  }
+
   return "Something went wrong. Please try again.";
+}
+
+type ReactNativeUploadFile = File & {
+  uri: string;
+};
+
+function toReactNativeUploadFile(file: File, uri: string) {
+  return Object.assign(file, { uri }) as ReactNativeUploadFile;
+}
+
+async function buildUploadFile(file: {
+  uri: string;
+  name: string;
+  mimeType: string;
+  file?: File;
+}) {
+  if (file.file instanceof File) {
+    return toReactNativeUploadFile(file.file, file.uri);
+  }
+
+  const response = await fetch(file.uri);
+
+  if (!response.ok) {
+    throw new Error("Unable to read the selected file");
+  }
+
+  const blob = await response.blob();
+  const UploadFile = globalThis.File;
+
+  if (!UploadFile) {
+    throw new Error("This device cannot prepare uploads right now.");
+  }
+
+  // UploadThing's React Native client expects the native file URI on the File.
+  return toReactNativeUploadFile(
+    new UploadFile([blob], file.name, {
+      type: file.mimeType,
+      lastModified: Date.now(),
+    }),
+    file.uri,
+  );
 }
 
 export const useDocumentStore = create<DocumentStore>()(
@@ -77,14 +126,14 @@ export const useDocumentStore = create<DocumentStore>()(
         set({ status: "uploading", errorMessage: null });
 
         try {
-          const body = new FormData();
-          body.append("file", {
-            uri: file.uri,
-            name: file.name,
-            type: file.mimeType,
-          } as never);
+          const uploadFile = await buildUploadFile(file);
 
-          await DocumentApi.createDocument(token, body);
+          await uploadFiles(DOCUMENT_UPLOAD_ENDPOINT, {
+            files: [uploadFile],
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
           await get().loadDocuments(token);
         } catch (error) {
           set({

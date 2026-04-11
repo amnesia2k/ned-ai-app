@@ -1,6 +1,5 @@
 import { request } from "@/lib/http";
 import type {
-  ServerCreateDocumentResponse,
   ServerGetDocumentResponse,
   ServerListDocumentsResponse,
   ServerReprocessDocumentResponse,
@@ -9,14 +8,6 @@ import type {
 export function listDocuments(token: string) {
   return request<ServerListDocumentsResponse>("/documents", {
     token,
-  });
-}
-
-export function createDocument(token: string, body: FormData) {
-  return request<ServerCreateDocumentResponse>("/documents", {
-    method: "POST",
-    token,
-    body,
   });
 }
 

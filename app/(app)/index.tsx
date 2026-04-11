@@ -72,6 +72,7 @@ export default function HomeScreen() {
       await uploadDocument(token, {
         uri: asset.uri,
         name: asset.name,
+        file: asset.file,
         mimeType:
           asset.mimeType ||
           (asset.name.toLowerCase().endsWith(".pdf")
