@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
+import { DatePickerField } from "@/components/DatePickerField";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
 
 function Field({
@@ -154,10 +155,10 @@ export default function OnboardingScreen() {
               onChangeText={setMatricNumber}
               placeholder="MAT/2022/001"
             />
-            <Field
+            <DatePickerField
               label="Date of Birth"
               value={dateOfBirth}
-              onChangeText={setDateOfBirth}
+              onChange={setDateOfBirth}
               placeholder="YYYY-MM-DD"
             />
           </>

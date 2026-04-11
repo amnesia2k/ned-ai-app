@@ -1,8 +1,16 @@
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { AppShell } from "@/components/AppShell";
+import { DatePickerField } from "@/components/DatePickerField";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
 import { useChatStore } from "@/modules/chat/useChatStore";
 
@@ -172,11 +180,7 @@ export default function ProfileScreen() {
             onChangeText={setFullName}
             placeholder="Your full name"
           />
-          <TextField
-            label="Email"
-            value={user?.email ?? ""}
-            editable={false}
-          />
+          <TextField label="Email" value={user?.email ?? ""} editable={false} />
           <TextField label="Role" value={user?.role ?? ""} editable={false} />
         </Section>
 
@@ -202,10 +206,10 @@ export default function ProfileScreen() {
                 onChangeText={setMatricNumber}
                 placeholder="MAT/2022/001"
               />
-              <TextField
+              <DatePickerField
                 label="Date of Birth"
                 value={dateOfBirth}
-                onChangeText={setDateOfBirth}
+                onChange={setDateOfBirth}
                 placeholder="YYYY-MM-DD"
               />
             </>
