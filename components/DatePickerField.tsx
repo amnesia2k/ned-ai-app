@@ -51,7 +51,7 @@ export function DatePickerField({
       </Text>
       <Pressable
         onPress={() => setShow(true)}
-        className="min-h-[56px] flex-row items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 active:bg-slate-100"
+        className="min-h-[56px] flex-row items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-8 py-4 active:bg-slate-100"
       >
         <Text
           className={`text-base ${value ? "text-slate-900" : "text-slate-400"}`}

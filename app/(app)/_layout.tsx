@@ -1,4 +1,4 @@
-import { Redirect, Stack, useSegments } from "expo-router";
+import { Stack, router, useSegments } from "expo-router";
 import { useEffect } from "react";
 
 import { useAuthStore } from "@/modules/auth/useAuthStore";
@@ -24,23 +24,34 @@ export default function AppLayout() {
     }
   }, [isAuthenticated, resetChat, resetDocuments, resetTimetable]);
 
+  useEffect(() => {
+    if (!hydrated || !bootstrapped || !isAuthenticated || !user) {
+      return;
+    }
+
+    const activeSegment = segments[segments.length - 1] ?? "index";
+    const isOnboardingRoute = activeSegment === "onboarding";
+    const isComplete = user.profileCompletion?.isComplete;
+
+    if (!isComplete && !isOnboardingRoute) {
+      router.replace("/(app)/onboarding");
+    } else if (isComplete && isOnboardingRoute) {
+      router.replace("/(app)");
+    }
+  }, [hydrated, bootstrapped, isAuthenticated, user, segments]);
+
+  useEffect(() => {
+    if (hydrated && bootstrapped && !isAuthenticated) {
+      router.replace("/(auth)/login");
+    }
+  }, [hydrated, bootstrapped, isAuthenticated]);
+
   if (!hydrated || !bootstrapped) {
     return null;
   }
 
   if (!isAuthenticated) {
-    return <Redirect href="/(auth)/login" />;
-  }
-
-  const activeSegment = segments[segments.length - 1] ?? "index";
-  const isOnboardingRoute = activeSegment === "onboarding";
-
-  if (user && !user.profileCompletion.isComplete && !isOnboardingRoute) {
-    return <Redirect href="/(app)/onboarding" />;
-  }
-
-  if (user?.profileCompletion.isComplete && isOnboardingRoute) {
-    return <Redirect href="/(app)" />;
+    return null;
   }
 
   return (

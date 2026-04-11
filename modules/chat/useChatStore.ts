@@ -420,13 +420,14 @@ export const useChatStore = create<ChatStore>()(
         }
       },
       messagesForActiveThread: () => {
-        const threadId = get().activeThreadId;
+        const state = get();
+        const threadId = state.activeThreadId;
 
         if (!threadId) {
-          return get().draftMessages;
+          return state.draftMessages;
         }
 
-        return get().messagesByChatId[threadId] ?? EMPTY_ARRAY;
+        return state.messagesByChatId[threadId] ?? EMPTY_ARRAY;
       },
       clearError: () => set({ errorMessage: null, status: "idle" }),
       reset: () => {

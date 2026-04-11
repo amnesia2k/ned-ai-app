@@ -1,3 +1,4 @@
+import * as Updates from "expo-updates";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -55,7 +56,7 @@ function TextField({
         placeholder={placeholder}
         placeholderTextColor="#94a3b8"
         editable={editable}
-        className={`min-h-[56px] rounded-2xl border border-slate-200 px-5 py-4 text-base ${editable ? "bg-slate-50 text-slate-900" : "bg-slate-100 text-slate-500"}`}
+        className={`min-h-[56px] rounded-2xl border border-slate-200 px-8 py-4 text-base ${editable ? "bg-slate-50 text-slate-900" : "bg-slate-100 text-slate-500"}`}
       />
     </View>
   );
@@ -164,6 +165,40 @@ export default function ProfileScreen() {
     );
   }
 
+  async function handleCheckForUpdates() {
+    try {
+      const update = await Updates.checkForUpdateAsync();
+      if (update.isAvailable) {
+        Alert.alert(
+          "Update Available",
+          "A new version of the app is available. Would you like to download and restart now?",
+          [
+            { text: "Later", style: "cancel" },
+            {
+              text: "Update Now",
+              onPress: async () => {
+                await Updates.fetchUpdateAsync();
+                await Updates.reloadAsync();
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert(
+          "Up to Date",
+          "You are running the latest version of NedAI.",
+        );
+      }
+    } catch {
+      Alert.alert(
+        "Update Error",
+        "Failed to check for updates. Please check your internet connection.",
+      );
+    }
+  }
+
+  const updateId = Updates.updateId?.slice(0, 8) ?? "Native Build";
+
   return (
     <AppShell
       title="Profile & Settings"
@@ -234,7 +269,26 @@ export default function ProfileScreen() {
           )}
         </Section>
 
-        <Section title="Session">
+        <Section title="System">
+          <View className="mb-3 rounded-2xl bg-white border border-slate-100 px-4 py-4 flex-row items-center justify-between">
+            <View>
+              <Text className="text-sm font-semibold text-slate-700">
+                Update Version
+              </Text>
+              <Text className="text-xs text-slate-400 mt-1">
+                ID: {updateId}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                void handleCheckForUpdates();
+              }}
+              className="rounded-xl bg-blue-50 px-4 py-2"
+            >
+              <Text className="text-sm font-bold text-blue-600">Check</Text>
+            </Pressable>
+          </View>
+
           <Pressable
             onPress={handleClearChatHistory}
             className="mb-3 rounded-2xl bg-rose-50 px-4 py-4"

@@ -1,4 +1,5 @@
-import { Redirect } from "expo-router";
+import { router } from "expo-router";
+import { useEffect } from "react";
 
 import { useAuthStore } from "@/modules/auth/useAuthStore";
 
@@ -8,17 +9,24 @@ export default function Index() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
 
-  if (!hydrated || !bootstrapped) {
-    return null;
-  }
+  useEffect(() => {
+    if (!hydrated || !bootstrapped) {
+      return;
+    }
 
-  if (!isAuthenticated) {
-    return <Redirect href="/(auth)/login" />;
-  }
+    if (!isAuthenticated) {
+      router.replace("/(auth)/login");
+      return;
+    }
 
-  return (
-    <Redirect
-      href={user?.profileCompletion.isComplete ? "/(app)" : "/(app)/onboarding"}
-    />
-  );
+    const isComplete = user?.profileCompletion?.isComplete;
+    router.replace(isComplete ? "/(app)" : "/(app)/onboarding");
+  }, [
+    hydrated,
+    bootstrapped,
+    isAuthenticated,
+    user?.profileCompletion?.isComplete,
+  ]);
+
+  return null;
 }
