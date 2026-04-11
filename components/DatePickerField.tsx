@@ -45,11 +45,13 @@ export function DatePickerField({
   const displayValue = value || placeholder;
 
   return (
-    <View className="mb-4">
-      <Text className="mb-2 text-sm font-semibold text-slate-700">{label}</Text>
+    <View className="mb-5">
+      <Text className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+        {label}
+      </Text>
       <Pressable
         onPress={() => setShow(true)}
-        className="flex-row items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 active:bg-slate-100"
+        className="min-h-[56px] flex-row items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 active:bg-slate-100"
       >
         <Text
           className={`text-base ${value ? "text-slate-900" : "text-slate-400"}`}

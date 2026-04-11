@@ -17,13 +17,16 @@ function Field({
   placeholder: string;
 }) {
   return (
-    <View className="mb-4">
-      <Text className="mb-2 text-sm font-semibold text-slate-700">{label}</Text>
+    <View className="mb-5">
+      <Text className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+        {label}
+      </Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900"
+        placeholderTextColor="#94a3b8"
+        className="min-h-[56px] rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base text-slate-900"
       />
     </View>
   );
