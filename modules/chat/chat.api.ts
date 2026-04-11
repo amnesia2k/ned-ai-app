@@ -29,3 +29,10 @@ export function sendMessage(token: string, payload: SendMessagePayload) {
     body: payload,
   });
 }
+
+export function clearChatHistory(token: string) {
+  return request<Record<string, never>>("/chats", {
+    method: "DELETE",
+    token,
+  });
+}

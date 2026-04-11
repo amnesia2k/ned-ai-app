@@ -1,20 +1,14 @@
 import { router } from "expo-router";
 import { ChevronLeft, Eye, EyeOff } from "lucide-react-native";
 import React, { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { KeyboardScreenView } from "@/components/KeyboardScreenView";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
 
 export default function ChangePasswordScreen() {
+  const insets = useSafeAreaInsets();
   const changePassword = useAuthStore((state) => state.changePassword);
   const clearError = useAuthStore((state) => state.clearError);
   const errorMessage = useAuthStore((state) => state.errorMessage);
@@ -70,30 +64,29 @@ export default function ChangePasswordScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-      {/* Header */}
-      <View className="flex-row items-center px-5 py-4 border-b border-slate-50">
+      <View className="flex-row items-center border-b border-slate-50 px-5 py-4">
         <Pressable onPress={() => router.back()} className="p-1">
           <ChevronLeft size={24} color="#0F172A" />
         </Pressable>
-        <Text className="ml-4 text-lg font-bold text-slate-900">Change Password</Text>
+        <Text className="ml-4 text-lg font-bold text-slate-900">
+          Change Password
+        </Text>
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+      <KeyboardScreenView>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 100, paddingTop: 24 }}
+          contentContainerStyle={{ paddingTop: 24, paddingBottom: 32 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
-          <View className="px-5 space-y-6">
-            {/* Current Password */}
+          <View className="px-5">
             <View>
               <Text className="mb-2 text-sm font-bold text-slate-800">
                 Current Password
               </Text>
-              <View className="flex-row items-center rounded-2xl bg-white border border-slate-200 px-4 py-3.5 focus-within:border-blue-500">
+              <View className="flex-row items-center rounded-2xl border border-slate-200 bg-white px-4 py-3.5 focus-within:border-blue-500">
                 <TextInput
                   value={currentPassword}
                   onChangeText={(value) => {
@@ -117,12 +110,11 @@ export default function ChangePasswordScreen() {
               </View>
             </View>
 
-            {/* New Password */}
             <View className="mt-6">
               <Text className="mb-2 text-sm font-bold text-slate-800">
                 New Password
               </Text>
-              <View className="flex-row items-center rounded-2xl bg-white border border-slate-200 px-4 py-3.5 focus-within:border-blue-500">
+              <View className="flex-row items-center rounded-2xl border border-slate-200 bg-white px-4 py-3.5 focus-within:border-blue-500">
                 <TextInput
                   value={newPassword}
                   onChangeText={(value) => {
@@ -145,16 +137,16 @@ export default function ChangePasswordScreen() {
                 </Pressable>
               </View>
               <Text className="mt-2 text-xs leading-5 text-slate-500">
-                Password must be at least 8 characters long and include a mix of letters, numbers, and symbols.
+                Password must be at least 8 characters long and include a mix of
+                letters, numbers, and symbols.
               </Text>
             </View>
 
-            {/* Confirm New Password */}
             <View className="mt-6">
               <Text className="mb-2 text-sm font-bold text-slate-800">
                 Confirm New Password
               </Text>
-              <View className="flex-row items-center rounded-2xl bg-white border border-slate-200 px-4 py-3.5 focus-within:border-blue-500">
+              <View className="flex-row items-center rounded-2xl border border-slate-200 bg-white px-4 py-3.5 focus-within:border-blue-500">
                 <TextInput
                   value={confirmPassword}
                   onChangeText={(value) => {
@@ -184,8 +176,10 @@ export default function ChangePasswordScreen() {
           </View>
         </ScrollView>
 
-        {/* Update Password Button */}
-        <View className="absolute bottom-6 left-0 right-0 px-5 bg-white pt-2">
+        <View
+          className="border-t border-slate-100 bg-white px-5 pt-4"
+          style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+        >
           <Pressable
             onPress={() => void handleSubmit()}
             disabled={isSubmitting}
@@ -196,7 +190,7 @@ export default function ChangePasswordScreen() {
             </Text>
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardScreenView>
     </SafeAreaView>
   );
 }

@@ -1,5 +1,14 @@
-import { Href, router } from "expo-router";
-import { LogOut, MessageSquare, MoreVertical, Plus, Settings } from "lucide-react-native";
+import { Href, router, useSegments } from "expo-router";
+import {
+  BookOpen,
+  CalendarDays,
+  FolderOpen,
+  LogOut,
+  MessageSquare,
+  MoreVertical,
+  Plus,
+  User,
+} from "lucide-react-native";
 import React, { useEffect } from "react";
 import {
   Dimensions,
@@ -24,6 +33,37 @@ import { useChatStore } from "@/modules/chat/useChatStore";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+const STUDY_TOOLS = [
+  {
+    key: "chat",
+    label: "Chat",
+    href: "/(app)" as Href,
+    icon: MessageSquare,
+    segment: "(app)",
+  },
+  {
+    key: "knowledge-vault",
+    label: "Knowledge Vault",
+    href: "/(app)/knowledge-vault" as Href,
+    icon: FolderOpen,
+    segment: "knowledge-vault",
+  },
+  {
+    key: "timetable",
+    label: "Timetable",
+    href: "/(app)/timetable" as Href,
+    icon: CalendarDays,
+    segment: "timetable",
+  },
+  {
+    key: "profile",
+    label: "Profile & Settings",
+    href: "/(app)/profile" as Href,
+    icon: User,
+    segment: "profile",
+  },
+] as const;
+
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
 
@@ -36,6 +76,7 @@ export function Sidebar() {
   const startFreshChat = useChatStore((state) => state.startFreshChat);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const segments = useSegments();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const translateX = useSharedValue(-SIDEBAR_WIDTH);
   const opacity = useSharedValue(0);
@@ -76,6 +117,7 @@ export function Sidebar() {
 
   function handleClose() {
     setSidebarOpen(false);
+    setIsMenuOpen(false);
   }
 
   function handleLogout() {
@@ -83,6 +125,16 @@ export function Sidebar() {
     handleClose();
     router.replace("/(auth)/login");
   }
+
+  function handleSelectRecentThread(threadId: string) {
+    router.replace("/(app)");
+    void selectThread(threadId);
+    handleClose();
+  }
+
+  const activeSegment = segments[segments.length - 1] ?? "(app)";
+  const displayName = user?.fullName || user?.email || "NedAI User";
+  const initials = displayName.slice(0, 1).toUpperCase();
 
   return (
     <View
@@ -110,6 +162,7 @@ export function Sidebar() {
               className="flex-row items-center justify-center rounded-xl bg-blue-600 py-3.5 shadow-sm"
               onPress={() => {
                 startFreshChat();
+                router.replace("/(app)");
                 handleClose();
               }}
             >
@@ -120,7 +173,43 @@ export function Sidebar() {
             </TouchableOpacity>
           </View>
 
+          <View className="px-4 pb-4">
+            <Text className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">
+              Study Tools
+            </Text>
+            {STUDY_TOOLS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSegment === item.segment;
+
+              return (
+                <TouchableOpacity
+                  key={item.key}
+                  activeOpacity={0.7}
+                  className={`mb-1 flex-row items-center rounded-xl p-3 ${isActive ? "bg-blue-50" : ""}`}
+                  onPress={() => {
+                    router.replace(item.href);
+                    handleClose();
+                  }}
+                >
+                  <Icon
+                    size={18}
+                    color={isActive ? "#2563EB" : "#64748B"}
+                    strokeWidth={2}
+                  />
+                  <Text
+                    className={`ml-3 text-sm ${isActive ? "font-semibold text-blue-700" : "text-slate-700"}`}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           <ScrollView className="flex-1 px-4">
+            <Text className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">
+              Recent Chats
+            </Text>
             {(["Today", "Yesterday", "Previous 7 Days", "Older"] as const).map(
               (label) =>
                 groupedThreads[label].length > 0 ? (
@@ -134,8 +223,7 @@ export function Sidebar() {
                         title={thread.title}
                         active={thread.id === activeThreadId}
                         onPress={() => {
-                          void selectThread(thread.id);
-                          handleClose();
+                          handleSelectRecentThread(thread.id);
                         }}
                       />
                     ))}
@@ -153,28 +241,21 @@ export function Sidebar() {
           </ScrollView>
 
           <View className="flex-row items-center justify-between border-t border-slate-100 p-4">
-            <TouchableOpacity
-              activeOpacity={0.8}
-              className="flex-1 flex-row items-center"
-              onPress={() => {
-                handleClose();
-                router.push("/(app)/settings");
-              }}
-            >
+            <View className="flex-1 flex-row items-center">
               <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-orange-100">
                 <Text className="text-sm font-bold text-orange-700">
-                  {(user?.name || user?.email || "N").slice(0, 1).toUpperCase()}
+                  {initials}
                 </Text>
               </View>
               <View className="flex-1">
                 <Text className="text-sm font-bold text-slate-900">
-                  {user?.name ?? "NedAI User"}
+                  {displayName}
                 </Text>
                 <Text className="text-xs text-slate-400" numberOfLines={1}>
                   {user?.email ?? "No active session"}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </View>
             <View className="relative">
               <TouchableOpacity
                 activeOpacity={0.7}
@@ -192,13 +273,12 @@ export function Sidebar() {
                   <TouchableOpacity
                     className="flex-row items-center p-3 active:bg-slate-50 border-b border-slate-50"
                     onPress={() => {
-                      setIsMenuOpen(false);
                       handleClose();
-                      router.push("/(app)/settings" as Href);
+                      router.push("/(app)/profile" as Href);
                     }}
                   >
-                    <Settings size={18} color="#64748B" className="mr-3" />
-                    <Text className="text-sm font-medium text-slate-700">Settings</Text>
+                    <User size={18} color="#64748B" className="mr-3" />
+                    <Text className="text-sm font-medium text-slate-700">Profile & Settings</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     className="flex-row items-center p-3 active:bg-slate-50"
@@ -232,7 +312,7 @@ function HistoryItem({
       className={`mb-1 flex-row items-center rounded-xl p-3 ${active ? "bg-slate-50" : ""}`}
       onPress={onPress}
     >
-      <MessageSquare
+      <BookOpen
         size={18}
         color={active ? "#374151" : "#94A3B8"}
         strokeWidth={2}

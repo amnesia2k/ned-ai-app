@@ -4,6 +4,10 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import { ApiClientError, isApiClientError } from "@/lib/http";
 import * as AuthApi from "@/modules/auth/auth.api";
+import {
+  buildProfileUpdatePayload,
+  type UpdateProfilePayload,
+} from "@/modules/auth/profile-payload";
 import type { AuthState, AuthUser } from "@/modules/contracts";
 
 type LoginCredentials = {
@@ -12,11 +16,8 @@ type LoginCredentials = {
 };
 
 type SignupCredentials = LoginCredentials & {
-  name: string;
-};
-
-type UpdateProfilePayload = {
-  name: string;
+  fullName: string;
+  role: "STUDENT" | "LECTURER";
 };
 
 type ChangePasswordPayload = {
@@ -176,9 +177,10 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           const response = await AuthApi.register({
-            name: credentials.name.trim(),
+            fullName: credentials.fullName.trim(),
             email: credentials.email.trim().toLowerCase(),
             password: credentials.password,
+            role: credentials.role,
           });
 
           applyAuthenticatedSession(set, response);
@@ -200,10 +202,17 @@ export const useAuthStore = create<AuthStore>()(
         });
 
         try {
+          const currentUser = get().user;
           const token = getRequiredAccessToken(get().accessToken);
-          const response = await AuthApi.updateCurrentUser(token, {
-            name: payload.name.trim(),
-          });
+
+          if (!currentUser) {
+            throw new ApiClientError(401, "Unauthorized");
+          }
+
+          const response = await AuthApi.updateCurrentUser(
+            token,
+            buildProfileUpdatePayload(currentUser.role, payload),
+          );
 
           set({
             user: response.user,
@@ -254,7 +263,9 @@ export const useAuthStore = create<AuthStore>()(
           throw error;
         }
       },
-      logout: () => clearSession(set),
+      logout: () => {
+        clearSession(set);
+      },
       clearError: () => set({ errorMessage: null, status: "idle" }),
       markHydrated: () => set({ hydrated: true }),
       markBootstrapped: () => set({ bootstrapped: true }),

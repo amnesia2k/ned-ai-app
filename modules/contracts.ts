@@ -10,13 +10,25 @@ export type ApiErrorPayload = {
   data?: Record<string, unknown> | unknown[];
 };
 
+export type UserRole = "STUDENT" | "LECTURER";
+
+export type ProfileCompletion = {
+  isComplete: boolean;
+  missingFields: string[];
+};
+
 export type AuthUser = {
   id: string;
-  name: string;
+  fullName: string;
   email: string;
-  role: string;
+  role: UserRole;
   institution: string | null;
-  image?: string;
+  matricNumber: string | null;
+  studentAcademicLevel: string | null;
+  dateOfBirth: string | null;
+  lecturerHighestQualification: string | null;
+  lecturerCurrentAcademicStage: string | null;
+  profileCompletion: ProfileCompletion;
   createdAt: string;
   updatedAt: string;
 };
@@ -33,6 +45,31 @@ export type MessageSource = {
   lessonTitle: string;
   sourcePath: string;
   pageNumber?: number;
+};
+
+export type DocumentSourceType = "DOCX" | "DOC" | "PDF";
+export type DocumentStatus = "UPLOADED" | "PROCESSING" | "READY" | "FAILED";
+
+export type DocumentSummary = {
+  id: string;
+  title: string;
+  originalFilename: string;
+  sourceType: DocumentSourceType;
+  status: DocumentStatus;
+  byteSize: number;
+  chunkCount: number;
+  processingError: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DocumentDetail = DocumentSummary;
+
+export type DocumentQuota = {
+  maxDocuments: number;
+  usedDocuments: number;
+  maxBytes: number;
+  usedBytes: number;
 };
 
 export type ChatThread = {
@@ -89,4 +126,53 @@ export type ServerSendMessageResponse = {
     usedGeneralKnowledge: boolean;
     sources: MessageSource[];
   };
+};
+
+export type ServerListDocumentsResponse = {
+  documents: DocumentSummary[];
+  quota: DocumentQuota;
+};
+
+export type ServerGetDocumentResponse = {
+  document: DocumentDetail;
+};
+
+export type ServerCreateDocumentResponse = {
+  document: DocumentSummary;
+};
+
+export type ServerReprocessDocumentResponse = {
+  document: DocumentSummary;
+};
+
+export type Weekday =
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY"
+  | "SATURDAY"
+  | "SUNDAY";
+
+export type TimetableActivity = {
+  id: string;
+  userId: string;
+  name: string;
+  dayOfWeek: Weekday;
+  startTime: string;
+  endTime: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ServerListTimetableActivitiesResponse = {
+  activities: TimetableActivity[];
+};
+
+export type ServerCreateTimetableActivityResponse = {
+  activity: TimetableActivity;
+};
+
+export type ServerUpdateTimetableActivityResponse = {
+  activity: TimetableActivity;
 };

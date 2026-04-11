@@ -1,22 +1,90 @@
 import Markdown from "@ronradtke/react-native-markdown-display";
+import MathJax from "react-native-mathjax";
 import React from "react";
-import { Linking, StyleSheet } from "react-native";
+import { Linking, StyleSheet, View } from "react-native";
 
 type Props = {
   content: string;
 };
 
+type Segment =
+  | { type: "text"; content: string }
+  | { type: "math"; content: string };
+
+const MATH_PATTERN =
+  /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$)/g;
+
+function splitContent(content: string): Segment[] {
+  const segments: Segment[] = [];
+  let lastIndex = 0;
+
+  for (const match of content.matchAll(MATH_PATTERN)) {
+    const matchIndex = match.index ?? 0;
+
+    if (matchIndex > lastIndex) {
+      const text = content.slice(lastIndex, matchIndex);
+
+      if (text.trim().length > 0) {
+        segments.push({
+          type: "text",
+          content: text,
+        });
+      }
+    }
+
+    segments.push({
+      type: "math",
+      content: match[0],
+    });
+    lastIndex = matchIndex + match[0].length;
+  }
+
+  const trailing = content.slice(lastIndex);
+
+  if (trailing.trim().length > 0) {
+    segments.push({
+      type: "text",
+      content: trailing,
+    });
+  }
+
+  return segments.length > 0 ? segments : [{ type: "text", content }];
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
 export function MarkdownMessage({ content }: Props) {
+  const segments = splitContent(content);
+
   return (
-    <Markdown
-      style={styles}
-      onLinkPress={(url) => {
-        void Linking.openURL(url);
-        return false;
-      }}
-    >
-      {content}
-    </Markdown>
+    <View>
+      {segments.map((segment, index) =>
+        segment.type === "text" ? (
+          <Markdown
+            key={`text-${index}`}
+            style={styles}
+            onLinkPress={(url) => {
+              void Linking.openURL(url);
+              return false;
+            }}
+          >
+            {segment.content}
+          </Markdown>
+        ) : (
+          <View key={`math-${index}`} style={styles.mathWrap}>
+            <MathJax
+              style={styles.mathFrame}
+              html={`<div style="font-size: 18px; color: #0F172A;">${escapeHtml(segment.content)}</div>`}
+            />
+          </View>
+        ),
+      )}
+    </View>
   );
 }
 
@@ -123,5 +191,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 16,
     backgroundColor: "#E2E8F0",
+  },
+  mathWrap: {
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    overflow: "hidden",
+  },
+  mathFrame: {
+    backgroundColor: "#F8FAFC",
   },
 });

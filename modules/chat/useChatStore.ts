@@ -8,7 +8,9 @@ import * as ChatApi from "@/modules/chat/chat.api";
 import type { ChatMessage, ChatThread } from "@/modules/contracts";
 import { useSyncStore } from "@/modules/sync/useSyncStore";
 
-type PersistedChatStore = Pick<ChatStore, "activeThreadId">;
+const EMPTY_ARRAY: any[] = [];
+
+type PersistedChatStore = Partial<Pick<ChatStore, "activeThreadId">>;
 
 type ChatStore = {
   hydrated: boolean;
@@ -24,6 +26,7 @@ type ChatStore = {
   selectThread: (threadId: string) => Promise<void>;
   startFreshChat: () => void;
   sendMessage: (content: string) => Promise<void>;
+  clearChatHistory: () => Promise<void>;
   messagesForActiveThread: () => ChatMessage[];
   clearError: () => void;
   reset: () => void;
@@ -151,7 +154,7 @@ export const useChatStore = create<ChatStore>()(
               ? currentActiveThreadId
               : currentActiveThreadId === null
                 ? null
-                : response.chats[0]?.id ?? null;
+                : (response.chats[0]?.id ?? null);
 
           set({
             threads: response.chats,
@@ -261,7 +264,8 @@ export const useChatStore = create<ChatStore>()(
 
         set((state) => {
           if (activeThreadId) {
-            const existingMessages = state.messagesByChatId[activeThreadId] ?? [];
+            const existingMessages =
+              state.messagesByChatId[activeThreadId] ?? [];
 
             return {
               status: "sending" as const,
@@ -337,7 +341,8 @@ export const useChatStore = create<ChatStore>()(
 
           set((state) => {
             if (activeThreadId) {
-              const existingMessages = state.messagesByChatId[activeThreadId] ?? [];
+              const existingMessages =
+                state.messagesByChatId[activeThreadId] ?? [];
               const withoutAssistantPlaceholder = removeMessagesById(
                 existingMessages,
                 [optimisticAssistantMessage.id],
@@ -376,6 +381,39 @@ export const useChatStore = create<ChatStore>()(
           throw error;
         }
       },
+      clearChatHistory: async () => {
+        set({
+          status: "loading",
+          errorMessage: null,
+        });
+        useSyncStore.getState().startSync();
+
+        try {
+          const token = requireAccessToken();
+          await ChatApi.clearChatHistory(token);
+
+          set({
+            activeThreadId: null,
+            threads: [],
+            draftMessages: [],
+            messagesByChatId: {},
+            loadedChatIds: [],
+            status: "idle",
+            errorMessage: null,
+          });
+          useSyncStore.getState().setChatCount(0);
+          useSyncStore.getState().markSynced();
+        } catch (error) {
+          const errorMessage = handleChatError(error);
+
+          set({
+            status: "error",
+            errorMessage,
+          });
+          useSyncStore.getState().markError(errorMessage);
+          throw error;
+        }
+      },
       messagesForActiveThread: () => {
         const threadId = get().activeThreadId;
 
@@ -383,7 +421,7 @@ export const useChatStore = create<ChatStore>()(
           return get().draftMessages;
         }
 
-        return get().messagesByChatId[threadId] ?? [];
+        return get().messagesByChatId[threadId] ?? EMPTY_ARRAY;
       },
       clearError: () => set({ errorMessage: null, status: "idle" }),
       reset: () => {
@@ -404,7 +442,7 @@ export const useChatStore = create<ChatStore>()(
       name: "nedai-chat-store",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        // We purposefully don't persist activeThreadId to ensure that the app 
+        // We purposefully don't persist activeThreadId to ensure that the app
         // starts with a fresh chat session on every cold start.
       }),
       onRehydrateStorage: () => (state) => {

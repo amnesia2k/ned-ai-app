@@ -12,9 +12,15 @@ type Props = {
   disabled?: boolean;
   helperText?: string;
   onSend?: (message: string) => void;
+  onAttach?: () => void;
 };
 
-export function ChatInput({ disabled = false, helperText, onSend }: Props) {
+export function ChatInput({
+  disabled = false,
+  helperText,
+  onSend,
+  onAttach,
+}: Props) {
   const [message, setMessage] = useState("");
 
   function handleSend() {
@@ -32,7 +38,7 @@ export function ChatInput({ disabled = false, helperText, onSend }: Props) {
     <View style={styles.wrapper}>
       {helperText ? <Text style={styles.helperText}>{helperText}</Text> : null}
       <View style={styles.container}>
-        <TouchableOpacity activeOpacity={0.7}>
+        <TouchableOpacity activeOpacity={0.7} onPress={onAttach} disabled={disabled}>
           <Plus size={24} color="#94A3B8" strokeWidth={2.5} />
         </TouchableOpacity>
 

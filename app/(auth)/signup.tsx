@@ -5,8 +5,6 @@ import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -16,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { KeyboardScreenView } from "@/components/KeyboardScreenView";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
 
 function isValidEmail(value: string) {
@@ -24,9 +23,10 @@ function isValidEmail(value: string) {
 
 export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
-  const [name, setName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"STUDENT" | "LECTURER">("STUDENT");
   const [localError, setLocalError] = useState<string | null>(null);
   const signUp = useAuthStore((state) => state.signUp);
   const clearError = useAuthStore((state) => state.clearError);
@@ -38,13 +38,13 @@ export default function SignupScreen() {
   async function handleSignup() {
     clearError();
 
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setLocalError("Name, email, and password are required.");
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      setLocalError("Full name, role, email, and password are required.");
       return;
     }
 
-    if (name.trim().length < 2) {
-      setLocalError("Name must be at least 2 characters.");
+    if (fullName.trim().length < 2) {
+      setLocalError("Full name must be at least 2 characters.");
       return;
     }
 
@@ -61,7 +61,7 @@ export default function SignupScreen() {
     setLocalError(null);
 
     try {
-      await signUp({ name, email, password });
+      await signUp({ fullName, role, email, password });
     } catch {}
   }
 
@@ -69,16 +69,13 @@ export default function SignupScreen() {
     <SafeAreaView style={{ flex: 1 }} className="bg-white">
       <StatusBar style="dark" />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
+      <KeyboardScreenView>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
             contentContainerStyle={{ flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           >
             <View className="flex-1 items-center px-6 pb-10 pt-10">
               <View className="mb-4 h-20 w-20 items-center justify-center">
@@ -115,13 +112,42 @@ export default function SignupScreen() {
                       placeholder="John Doe"
                       placeholderTextColor="#94A3B8"
                       className="ml-3 flex-1 text-base text-slate-900"
-                      value={name}
+                      value={fullName}
                       onChangeText={(value) => {
-                        setName(value);
+                        setFullName(value);
                         setLocalError(null);
                         clearError();
                       }}
                     />
+                  </View>
+                </View>
+
+                <View className="mb-5">
+                  <Text className="mb-2 ml-1 text-sm font-semibold text-slate-700">
+                    Role
+                  </Text>
+                  <View className="flex-row">
+                    {([
+                      { label: "Student", value: "STUDENT" },
+                      { label: "Lecturer", value: "LECTURER" },
+                    ] as const).map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          setRole(option.value);
+                          setLocalError(null);
+                          clearError();
+                        }}
+                        className={`mr-3 flex-1 rounded-xl px-4 py-3 ${role === option.value ? "bg-blue-600" : "bg-slate-100"}`}
+                      >
+                        <Text
+                          className={`text-center text-sm font-semibold ${role === option.value ? "text-white" : "text-slate-700"}`}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
                 </View>
 
@@ -216,7 +242,7 @@ export default function SignupScreen() {
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+      </KeyboardScreenView>
     </SafeAreaView>
   );
 }

@@ -13,6 +13,10 @@ type RequestOptions = {
   headers?: Record<string, string>;
 };
 
+function isFormDataBody(value: unknown): value is FormData {
+  return typeof FormData !== "undefined" && value instanceof FormData;
+}
+
 export class ApiClientError extends Error {
   status: number;
   data?: ApiErrorPayload["data"];
@@ -55,6 +59,62 @@ function getAxiosErrorPayload(error: AxiosError<ApiErrorPayload>) {
   return null;
 }
 
+function buildRequestUrl(path: string) {
+  return `${API_BASE_URL.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+}
+
+function getApiErrorPayload(value: unknown) {
+  if (value && typeof value === "object" && "message" in value) {
+    return value as ApiErrorPayload;
+  }
+
+  return null;
+}
+
+function getApiSuccessPayload<T>(value: unknown) {
+  if (value && typeof value === "object" && "data" in value) {
+    return value as ApiResponse<T>;
+  }
+
+  return null;
+}
+
+async function requestFormData<T>(
+  path: string,
+  config: Omit<RequestInit, "body"> & { body: FormData },
+) {
+  const response = await fetch(buildRequestUrl(path), config);
+
+  if (response.status === 204) {
+    return {} as T;
+  }
+
+  const rawBody = await response.text();
+  const parsedBody = rawBody ? (JSON.parse(rawBody) as unknown) : null;
+
+  if (!response.ok) {
+    const payload = getApiErrorPayload(parsedBody);
+
+    throw new ApiClientError(
+      response.status,
+      payload?.message || `Request failed with status ${response.status}`,
+      payload?.data,
+    );
+  }
+
+  const envelope = getApiSuccessPayload<T>(parsedBody);
+
+  if (!envelope) {
+    throw new ApiClientError(response.status, "Invalid server response");
+  }
+
+  if (envelope.success === false) {
+    throw new ApiClientError(response.status, envelope.message, undefined);
+  }
+
+  return envelope.data;
+}
+
 export async function request<T>(path: string, options: RequestOptions = {}) {
   ensureApiBaseUrl();
 
@@ -63,7 +123,7 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
     ...options.headers,
   };
 
-  if (options.body !== undefined) {
+  if (options.body !== undefined && !isFormDataBody(options.body)) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -79,7 +139,20 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
   };
 
   try {
+    if (isFormDataBody(options.body)) {
+      return await requestFormData<T>(path, {
+        method: options.method ?? "GET",
+        headers,
+        body: options.body,
+      });
+    }
+
     const response = await httpClient.request<ApiResponse<T>>(config);
+
+    if (response.status === 204) {
+      return {} as T;
+    }
+
     const envelope = response.data;
 
     if (!envelope || typeof envelope !== "object" || !("data" in envelope)) {
@@ -97,13 +170,17 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
 
       throw new ApiClientError(
         error.response?.status ?? 0,
-        payload?.message || "Unable to reach the server",
+        payload?.message || error.message || "Unable to reach the server",
         payload?.data,
       );
     }
 
     if (error instanceof ApiClientError) {
       throw error;
+    }
+
+    if (error instanceof Error) {
+      throw new ApiClientError(0, error.message || "Unable to reach the server");
     }
 
     throw new ApiClientError(0, "Unable to reach the server");

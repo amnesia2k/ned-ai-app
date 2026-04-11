@@ -5,8 +5,6 @@ import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -16,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { KeyboardScreenView } from "@/components/KeyboardScreenView";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
 
 function isValidEmail(value: string) {
@@ -58,16 +57,13 @@ export default function LoginScreen() {
     <SafeAreaView style={{ flex: 1 }} className="bg-white">
       <StatusBar style="dark" />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
+      <KeyboardScreenView>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
             contentContainerStyle={{ flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           >
             <View className="flex-1 items-center px-6 pb-10 pt-10">
               <View className="mb-4 h-20 w-20 items-center justify-center">
@@ -187,7 +183,7 @@ export default function LoginScreen() {
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+      </KeyboardScreenView>
     </SafeAreaView>
   );
 }

@@ -1,26 +1,28 @@
+import { router } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
 import { Sparkles } from "lucide-react-native";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useShallow } from "zustand/react/shallow";
 
+import { AppShell } from "@/components/AppShell";
 import { ChatInput } from "@/components/ChatInput";
 import { ChatMessageList } from "@/components/ChatMessageList";
-import { Header } from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
+import { KeyboardScreenView } from "@/components/KeyboardScreenView";
 import { SuggestionChip } from "@/components/SuggestionChip";
+import { useAuthStore } from "@/modules/auth/useAuthStore";
 import { useChatStore } from "@/modules/chat/useChatStore";
+import { useDocumentStore } from "@/modules/documents/useDocumentStore";
 
 export default function HomeScreen() {
+  const token = useAuthStore((state) => state.accessToken);
   const threads = useChatStore((state) => state.threads);
   const status = useChatStore((state) => state.status);
   const errorMessage = useChatStore((state) => state.errorMessage);
@@ -30,6 +32,8 @@ export default function HomeScreen() {
   const loadChats = useChatStore((state) => state.loadChats);
   const startFreshChat = useChatStore((state) => state.startFreshChat);
   const sendMessage = useChatStore((state) => state.sendMessage);
+  const uploadDocument = useDocumentStore((state) => state.uploadDocument);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const hasConversation = messages.length > 0;
   const isLoading = status === "loading";
   const isSending = status === "sending";
@@ -44,120 +48,159 @@ export default function HomeScreen() {
     } catch {}
   }
 
+  async function handleAttach() {
+    if (!token) {
+      return;
+    }
+
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ],
+        multiple: false,
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const asset = result.assets[0];
+
+      await uploadDocument(token, {
+        uri: asset.uri,
+        name: asset.name,
+        mimeType:
+          asset.mimeType ||
+          (asset.name.toLowerCase().endsWith(".pdf")
+            ? "application/pdf"
+            : "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+      });
+      setUploadMessage(
+        "Upload accepted. NedAI will use the file after processing finishes.",
+      );
+    } catch (error) {
+      setUploadMessage(
+        error instanceof Error ? error.message : "Document upload failed.",
+      );
+    }
+  }
+
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={0}
-        >
-          <View style={styles.flex}>
-            <Header onNewChat={startFreshChat} />
-
-            <View style={styles.body}>
-              {hasConversation ? (
-                <ChatMessageList messages={messages} />
-              ) : isLoading && threads.length > 0 ? (
-                <View style={styles.loadingState}>
-                  <Text style={styles.loadingText}>Loading conversation...</Text>
-                </View>
-              ) : (
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                  <View style={styles.centerArea}>
-                    <View style={styles.logoContainer}>
-                      <View style={styles.iconCircle}>
-                        <Sparkles
-                          size={42}
-                          color="#3B82F6"
-                          fill="#3B82F6"
-                          fillOpacity={0.15}
-                        />
-                      </View>
-                    </View>
-
-                    <Text style={styles.welcomeText}>
-                      What would you like to work on today?
-                    </Text>
-
-                    <View style={styles.chipsWrapper}>
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.chipsContent}
-                      >
-                        <SuggestionChip
-                          label="Plan my study session"
-                          onPress={() => {
-                            void handleSend("Plan my study session for this week");
-                          }}
-                        />
-                        <SuggestionChip
-                          label="Draft welcome text"
-                          onPress={() => {
-                            void handleSend(
-                              "Draft a welcome message for new users joining the app",
-                            );
-                          }}
-                        />
-                        <SuggestionChip
-                          label="Summarize notes"
-                          onPress={() => {
-                            void handleSend(
-                              "Summarize my meeting notes into three key points",
-                            );
-                          }}
-                        />
-                        <SuggestionChip
-                          label="Organize todos"
-                          onPress={() => {
-                            void handleSend(
-                              "Help me organize my tasks for the afternoon",
-                            );
-                          }}
-                        />
-                      </ScrollView>
+    <AppShell
+      title="Chat"
+      onNewChat={() => {
+        startFreshChat();
+        router.replace("/(app)");
+      }}
+    >
+      <KeyboardScreenView style={styles.flex}>
+        <View style={styles.flex}>
+          <View style={styles.body}>
+            {hasConversation ? (
+              <ChatMessageList messages={messages} />
+            ) : isLoading && threads.length > 0 ? (
+              <View style={styles.loadingState}>
+                <Text style={styles.loadingText}>Loading conversation...</Text>
+              </View>
+            ) : (
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.centerArea}>
+                  <View style={styles.logoContainer}>
+                    <View style={styles.iconCircle}>
+                      <Sparkles
+                        size={42}
+                        color="#3B82F6"
+                        fill="#3B82F6"
+                        fillOpacity={0.15}
+                      />
                     </View>
                   </View>
-                </TouchableWithoutFeedback>
-              )}
-            </View>
 
-            <ChatInput
-              disabled={isSending}
-              onSend={(message) => {
-                void handleSend(message);
-              }}
-              helperText={
-                errorMessage
-                  ? errorMessage
-                  : isSending
-                    ? "NedAI is replying..."
-                    : isLoading
-                      ? "Syncing chats from the server..."
-                      : "Messages are sent directly to the server."
-              }
-            />
+                  <Text style={styles.welcomeText}>
+                    What would you like to work on today?
+                  </Text>
+
+                  <View style={styles.chipsWrapper}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.chipsContent}
+                    >
+                      <SuggestionChip
+                        label="Create a chemistry quiz"
+                        onPress={() => {
+                          void handleSend(
+                            "Give me a 5-question multiple-choice quiz on my uploaded Chemistry PDF.",
+                          );
+                        }}
+                      />
+                      <SuggestionChip
+                        label="Explain a formula"
+                        onPress={() => {
+                          void handleSend(
+                            "Explain the quadratic formula and show the derivation.",
+                          );
+                        }}
+                      />
+                      <SuggestionChip
+                        label="Use my timetable"
+                        onPress={() => {
+                          void handleSend(
+                            "Use my timetable and suggest what I should focus on today.",
+                          );
+                        }}
+                      />
+                      <SuggestionChip
+                        label="Summarize my PDF"
+                        onPress={() => {
+                          void handleSend(
+                            "Summarize the key concepts from my uploaded document.",
+                          );
+                        }}
+                      />
+                    </ScrollView>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            )}
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
 
-      <Sidebar />
-    </View>
+          <ChatInput
+            disabled={isSending}
+            onAttach={() => {
+              void handleAttach();
+            }}
+            onSend={(message) => {
+              void handleSend(message);
+            }}
+            helperText={
+              uploadMessage
+                ? uploadMessage
+                : errorMessage
+                ? errorMessage
+                : isSending
+                  ? "NedAI is replying..."
+                  : isLoading
+                    ? "Syncing chats from the server..."
+                    : "Messages are sent directly to the server."
+            }
+          />
+        </View>
+      </KeyboardScreenView>
+    </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: "white",
-  },
   flex: {
     flex: 1,
+  },
+  activeBanner: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   body: {
     flex: 1,

@@ -5,6 +5,7 @@ import type {
   ServerCurrentUserResponse,
   ServerUpdateCurrentUserResponse,
 } from "@/modules/contracts";
+import type { UpdateProfilePayload } from "@/modules/auth/profile-payload";
 
 type LoginPayload = {
   email: string;
@@ -12,11 +13,8 @@ type LoginPayload = {
 };
 
 type RegisterPayload = LoginPayload & {
-  name: string;
-};
-
-type UpdateProfilePayload = {
-  name: string;
+  fullName: string;
+  role: "STUDENT" | "LECTURER";
 };
 
 type ChangePasswordPayload = {
