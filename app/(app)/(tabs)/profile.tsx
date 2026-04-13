@@ -56,7 +56,8 @@ function TextField({
         placeholder={placeholder}
         placeholderTextColor="#94a3b8"
         editable={editable}
-        className={`min-h-[56px] rounded-2xl border border-slate-200 px-8 py-4 text-base ${editable ? "bg-slate-50 text-slate-900" : "bg-slate-100 text-slate-500"}`}
+        className={`min-h-[56px] rounded-2xl border border-slate-200 px-5 py-4 text-base ${editable ? "bg-slate-50 text-slate-900" : "bg-slate-100 text-slate-500"}`}
+        style={{ paddingHorizontal: 20 }}
       />
     </View>
   );
@@ -204,12 +205,12 @@ export default function ProfileScreen() {
       title="Profile & Settings"
       onNewChat={() => {
         startFreshChat();
-        router.replace("/(app)");
+        router.replace("/");
       }}
     >
       <ScrollView
         className="flex-1 bg-slate-50"
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
       >
         <Section title="Identity">
           <TextField
@@ -270,6 +271,20 @@ export default function ProfileScreen() {
         </Section>
 
         <Section title="System">
+          <Pressable
+            onPress={() => {
+              router.push("/change-password");
+            }}
+            className="mb-3 rounded-2xl border border-slate-200 bg-white px-4 py-4"
+          >
+            <Text className="text-base font-semibold text-slate-800">
+              Change Password
+            </Text>
+            <Text className="mt-1 text-sm leading-5 text-slate-500">
+              Update your password without leaving your account settings.
+            </Text>
+          </Pressable>
+
           <View className="mb-3 rounded-2xl bg-white border border-slate-100 px-4 py-4 flex-row items-center justify-between">
             <View>
               <Text className="text-sm font-semibold text-slate-700">

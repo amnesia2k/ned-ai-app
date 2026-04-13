@@ -1,4 +1,4 @@
-import { Stack, router, useSegments } from "expo-router";
+import { Redirect, Stack, usePathname } from "expo-router";
 import { useEffect } from "react";
 
 import { useAuthStore } from "@/modules/auth/useAuthStore";
@@ -14,7 +14,7 @@ export default function AppLayout() {
   const resetChat = useChatStore((state) => state.reset);
   const resetDocuments = useDocumentStore((state) => state.resetSession);
   const resetTimetable = useTimetableStore((state) => state.reset);
-  const segments = useSegments();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -24,46 +24,36 @@ export default function AppLayout() {
     }
   }, [isAuthenticated, resetChat, resetDocuments, resetTimetable]);
 
-  useEffect(() => {
-    if (!hydrated || !bootstrapped || !isAuthenticated || !user) {
-      return;
-    }
-
-    const activeSegment = segments[segments.length - 1] ?? "index";
-    const isOnboardingRoute = activeSegment === "onboarding";
-    const isComplete = user.profileCompletion?.isComplete;
-
-    if (!isComplete && !isOnboardingRoute) {
-      router.replace("/(app)/onboarding");
-    } else if (isComplete && isOnboardingRoute) {
-      router.replace("/(app)");
-    }
-  }, [hydrated, bootstrapped, isAuthenticated, user, segments]);
-
-  useEffect(() => {
-    if (hydrated && bootstrapped && !isAuthenticated) {
-      router.replace("/(auth)/login");
-    }
-  }, [hydrated, bootstrapped, isAuthenticated]);
-
   if (!hydrated || !bootstrapped) {
     return null;
   }
 
   if (!isAuthenticated) {
+    return <Redirect href="/login" />;
+  }
+
+  if (!user) {
     return null;
+  }
+
+  const isOnboardingRoute = pathname === "/onboarding";
+  const isComplete = user.profileCompletion?.isComplete;
+
+  if (!isComplete && !isOnboardingRoute) {
+    return <Redirect href="/onboarding" />;
+  }
+
+  if (isComplete && isOnboardingRoute) {
+    return <Redirect href="/" />;
   }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="knowledge-vault" />
-      <Stack.Screen name="timetable" />
-      <Stack.Screen name="profile" />
-      <Stack.Screen name="settings" />
+      <Stack.Screen name="(tabs)" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="change-password" />
+      <Stack.Screen name="settings" />
     </Stack>
   );
 }

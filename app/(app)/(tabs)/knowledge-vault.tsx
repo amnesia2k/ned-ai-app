@@ -105,12 +105,12 @@ export default function KnowledgeVaultScreen() {
       title="Knowledge Vault"
       onNewChat={() => {
         startFreshChat();
-        router.replace("/(app)");
+        router.replace("/");
       }}
     >
       <ScrollView
         className="flex-1 bg-slate-50"
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
         refreshControl={
           <RefreshControl
             refreshing={status === "loading"}

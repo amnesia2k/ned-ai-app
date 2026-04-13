@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { Link, type Href } from "expo-router";
+import { Link } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
@@ -127,10 +127,12 @@ export default function SignupScreen() {
                     Role
                   </Text>
                   <View className="flex-row">
-                    {([
-                      { label: "Student", value: "STUDENT" },
-                      { label: "Lecturer", value: "LECTURER" },
-                    ] as const).map((option) => (
+                    {(
+                      [
+                        { label: "Student", value: "STUDENT" },
+                        { label: "Lecturer", value: "LECTURER" },
+                      ] as const
+                    ).map((option) => (
                       <TouchableOpacity
                         key={option.value}
                         activeOpacity={0.8}
@@ -233,7 +235,7 @@ export default function SignupScreen() {
                 <Text className="text-slate-500">
                   Already have an account?{" "}
                 </Text>
-                <Link href={"/(auth)/login" as Href} asChild>
+                <Link href="/login" asChild>
                   <TouchableOpacity activeOpacity={0.7}>
                     <Text className="font-bold text-blue-600">Log in</Text>
                   </TouchableOpacity>

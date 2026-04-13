@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { Link, type Href } from "expo-router";
+import { Link } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
@@ -174,7 +174,7 @@ export default function LoginScreen() {
                 <Text className="text-slate-500">
                   Don&apos;t have an account?{" "}
                 </Text>
-                <Link href={"/(auth)/signup" as Href} asChild>
+                <Link href="/signup" asChild>
                   <TouchableOpacity activeOpacity={0.7}>
                     <Text className="font-bold text-blue-600">Sign up</Text>
                   </TouchableOpacity>

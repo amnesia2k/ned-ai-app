@@ -2,7 +2,10 @@ import { router } from "expo-router";
 import { ChevronLeft, Eye, EyeOff } from "lucide-react-native";
 import React, { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { KeyboardScreenView } from "@/components/KeyboardScreenView";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
@@ -86,7 +89,7 @@ export default function ChangePasswordScreen() {
               <Text className="mb-2 text-sm font-bold text-slate-800">
                 Current Password
               </Text>
-              <View className="flex-row items-center rounded-2xl border border-slate-200 bg-white px-4 py-3.5 focus-within:border-blue-500">
+              <View className="flex-row items-center rounded-2xl border border-slate-200 bg-white px-5 py-3.5 focus-within:border-blue-500">
                 <TextInput
                   value={currentPassword}
                   onChangeText={(value) => {
@@ -114,7 +117,7 @@ export default function ChangePasswordScreen() {
               <Text className="mb-2 text-sm font-bold text-slate-800">
                 New Password
               </Text>
-              <View className="flex-row items-center rounded-2xl border border-slate-200 bg-white px-4 py-3.5 focus-within:border-blue-500">
+              <View className="flex-row items-center rounded-2xl border border-slate-200 bg-white px-5 py-3.5 focus-within:border-blue-500">
                 <TextInput
                   value={newPassword}
                   onChangeText={(value) => {
@@ -146,7 +149,7 @@ export default function ChangePasswordScreen() {
               <Text className="mb-2 text-sm font-bold text-slate-800">
                 Confirm New Password
               </Text>
-              <View className="flex-row items-center rounded-2xl border border-slate-200 bg-white px-4 py-3.5 focus-within:border-blue-500">
+              <View className="flex-row items-center rounded-2xl border border-slate-200 bg-white px-5 py-3.5 focus-within:border-blue-500">
                 <TextInput
                   value={confirmPassword}
                   onChangeText={(value) => {

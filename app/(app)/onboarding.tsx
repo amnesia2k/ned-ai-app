@@ -26,7 +26,8 @@ function Field({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#94a3b8"
-        className="min-h-[56px] rounded-2xl border border-slate-200 bg-slate-50 px-8 py-4 text-base text-slate-900"
+        className="min-h-[56px] rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base text-slate-900"
+        style={{ paddingHorizontal: 20 }}
       />
     </View>
   );
@@ -112,7 +113,7 @@ export default function OnboardingScreen() {
             }
           : {}),
       });
-      router.replace("/(app)");
+      router.replace("/");
     } catch {}
   }
 

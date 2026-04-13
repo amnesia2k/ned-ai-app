@@ -2,11 +2,13 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from "react-native";
 import { ArrowUp, FileText, Plus, X } from "lucide-react-native";
 
@@ -29,6 +31,7 @@ type Props = {
   documentSuggestions?: DocumentSummary[];
   documentSuggestionStatus?: DocumentSuggestionStatus;
   onSelectDocument?: (document: DocumentSummary) => void;
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
 function getDocumentStatusDescription(document: DocumentSummary) {
@@ -69,12 +72,13 @@ export function ChatInput({
   documentSuggestions = [],
   documentSuggestionStatus = "idle",
   onSelectDocument,
+  containerStyle,
 }: Props) {
   const hasSendableText = value.trim().length > 0 && !disabled;
   const hasSuggestions = documentSuggestions.length > 0;
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, containerStyle]}>
       {selectedDocument ? (
         <View style={styles.selectedDocumentChip}>
           <View style={styles.selectedDocumentMeta}>
@@ -102,10 +106,7 @@ export function ChatInput({
 
       {helperText ? (
         <Text
-          style={[
-            styles.helperText,
-            { color: getHelperColor(helperTone) },
-          ]}
+          style={[styles.helperText, { color: getHelperColor(helperTone) }]}
         >
           {helperText}
         </Text>
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 8,
+    paddingBottom: 2,
     backgroundColor: "white",
   },
   helperText: {

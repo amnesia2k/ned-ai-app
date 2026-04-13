@@ -1,5 +1,4 @@
-import { Stack, router } from "expo-router";
-import { useEffect } from "react";
+import { Redirect, Stack } from "expo-router";
 
 import { useAuthStore } from "@/modules/auth/useAuthStore";
 
@@ -9,21 +8,13 @@ export default function AuthLayout() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
 
-  useEffect(() => {
-    if (!hydrated || !bootstrapped || !isAuthenticated) {
-      return;
-    }
-
-    const isComplete = user?.profileCompletion?.isComplete;
-    router.replace(isComplete ? "/(app)" : "/(app)/onboarding");
-  }, [hydrated, bootstrapped, isAuthenticated, user]);
-
   if (!hydrated || !bootstrapped) {
     return null;
   }
 
   if (isAuthenticated) {
-    return null;
+    const isComplete = user?.profileCompletion?.isComplete;
+    return <Redirect href={isComplete ? "/" : "/onboarding"} />;
   }
 
   return (

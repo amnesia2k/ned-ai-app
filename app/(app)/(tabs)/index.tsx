@@ -1,22 +1,26 @@
 import { router } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { Sparkles } from "lucide-react-native";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Keyboard,
-  ScrollView,
+  Platform,
   StyleSheet,
   Text,
+  TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import BottomSheet, {
+  BottomSheetBackdrop,
+  BottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
 import { useShallow } from "zustand/react/shallow";
 
 import { AppShell } from "@/components/AppShell";
 import { ChatInput, type HelperTone } from "@/components/ChatInput";
 import { ChatMessageList } from "@/components/ChatMessageList";
 import { KeyboardScreenView } from "@/components/KeyboardScreenView";
-import { SuggestionChip } from "@/components/SuggestionChip";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
 import { isAssessmentPrompt } from "@/modules/chat/assessmentIntent";
 import { useChatStore } from "@/modules/chat/useChatStore";
@@ -80,9 +84,7 @@ function filterDocuments(documents: DocumentSummary[], query: string) {
     const title = document.title.toLowerCase();
     const originalFilename = document.originalFilename.toLowerCase();
 
-    return (
-      title.includes(normalized) || originalFilename.includes(normalized)
-    );
+    return title.includes(normalized) || originalFilename.includes(normalized);
   });
 }
 
@@ -119,8 +121,7 @@ export default function HomeScreen() {
     () => getActiveDocumentMention(composerText),
     [composerText],
   );
-  const showDocumentSuggestions =
-    forceSuggestionOpen || activeMention !== null;
+  const showDocumentSuggestions = forceSuggestionOpen || activeMention !== null;
   const localSuggestionResults = useMemo(
     () => filterDocuments(documents, activeMention?.query ?? ""),
     [activeMention?.query, documents],
@@ -138,7 +139,33 @@ export default function HomeScreen() {
         : "empty";
   const previousActiveThreadIdRef = useRef<string | null>(activeThreadId);
   const pendingFreshThreadFromSendRef = useRef(false);
+  const [isHistoryVisible, setIsHistoryVisible] = useState(false);
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const snapPoints = useMemo(() => ["50%", "85%"], []);
   const searchRequestIdRef = useRef(0);
+
+  const handleOpenHistory = useCallback(() => {
+    bottomSheetRef.current?.expand();
+    setIsHistoryVisible(true);
+  }, []);
+
+  const handleCloseHistory = useCallback(() => {
+    bottomSheetRef.current?.close();
+    setIsHistoryVisible(false);
+  }, []);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsAt={-1}
+        appearsAt={0}
+        opacity={0.5}
+      />
+    ),
+    [],
+  );
+
 
   useEffect(() => {
     void loadChats();
@@ -251,8 +278,9 @@ export default function HomeScreen() {
   function setComposerDraft(nextValue: string) {
     setComposerText(nextValue);
     setHelperState(null);
-    setForceSuggestionOpen((isOpen) =>
-      isOpen && !selectedDocument && isAssessmentPrompt(nextValue.trim()),
+    setForceSuggestionOpen(
+      (isOpen) =>
+        isOpen && !selectedDocument && isAssessmentPrompt(nextValue.trim()),
     );
   }
 
@@ -342,7 +370,10 @@ export default function HomeScreen() {
   function handleSelectDocument(document: DocumentSummary) {
     setSelectedDocument(document);
     setComposerText((currentValue) =>
-      removeDocumentMention(currentValue, getActiveDocumentMention(currentValue)),
+      removeDocumentMention(
+        currentValue,
+        getActiveDocumentMention(currentValue),
+      ),
     );
     setHelperState({
       text: `${document.title} attached.`,
@@ -359,12 +390,12 @@ export default function HomeScreen() {
       : isLoading
         ? "Syncing chats from the server..."
         : "Type @ to tag an uploaded document.");
-  const helperTone =
-    helperState?.tone ?? (errorMessage ? "error" : "neutral");
+  const helperTone = helperState?.tone ?? (errorMessage ? "error" : "neutral");
 
   return (
     <AppShell
       title="Chat"
+      onHistory={handleOpenHistory}
       onNewChat={() => {
         pendingFreshThreadFromSendRef.current = false;
         setComposerText("");
@@ -372,7 +403,7 @@ export default function HomeScreen() {
         setHelperState(null);
         setForceSuggestionOpen(false);
         startFreshChat();
-        router.replace("/(app)");
+        router.replace("/");
       }}
     >
       <KeyboardScreenView style={styles.flex}>
@@ -402,44 +433,8 @@ export default function HomeScreen() {
                     What would you like to work on today?
                   </Text>
 
-                  <View style={styles.chipsWrapper}>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipsContent}
-                    >
-                      <SuggestionChip
-                        label="Create a chemistry quiz"
-                        onPress={() => {
-                          prefillComposer(
-                            "Give me a 5-question multiple-choice quiz",
-                          );
-                        }}
-                      />
-                      <SuggestionChip
-                        label="Explain a formula"
-                        onPress={() => {
-                          prefillComposer(
-                            "Explain the quadratic formula and show the derivation.",
-                          );
-                        }}
-                      />
-                      <SuggestionChip
-                        label="Use my timetable"
-                        onPress={() => {
-                          prefillComposer(
-                            "Use my timetable and suggest what I should focus on today.",
-                          );
-                        }}
-                      />
-                      <SuggestionChip
-                        label="Summarize my PDF"
-                        onPress={() => {
-                          prefillComposer("Summarize this document");
-                        }}
-                      />
-                    </ScrollView>
-                  </View>
+
+
                 </View>
               </TouchableWithoutFeedback>
             )}
@@ -469,6 +464,59 @@ export default function HomeScreen() {
           />
         </View>
       </KeyboardScreenView>
+
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={-1}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        backdropComponent={renderBackdrop}
+        onClose={() => setIsHistoryVisible(false)}
+        handleIndicatorStyle={{ backgroundColor: "#CBD5E1" }}
+        backgroundStyle={{ backgroundColor: "#F8FAFC" }}
+      >
+        <View style={styles.modalRoot}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>History</Text>
+            <TouchableOpacity onPress={handleCloseHistory}>
+              <Text style={styles.modalClose}>Done</Text>
+            </TouchableOpacity>
+          </View>
+          <BottomSheetScrollView
+            style={styles.modalScroll}
+            contentContainerStyle={styles.modalContent}
+          >
+            {threads.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No chat history yet.</Text>
+              </View>
+            ) : (
+              threads.map((thread) => (
+                <TouchableOpacity
+                  key={thread.id}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    void useChatStore.getState().selectThread(thread.id);
+                    handleCloseHistory();
+                  }}
+                >
+                  <View style={styles.modalItemIcon}>
+                    <Sparkles size={20} color="#3B82F6" />
+                  </View>
+                  <View style={styles.modalItemBody}>
+                    <Text style={styles.modalItemTitle} numberOfLines={1}>
+                      {thread.title || "Untitled Chat"}
+                    </Text>
+                    <Text style={styles.modalItemMeta}>
+                      {new Date(thread.lastMessageAt).toLocaleString()}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </BottomSheetScrollView>
+        </View>
+      </BottomSheet>
     </AppShell>
   );
 }
@@ -531,5 +579,80 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontSize: 16,
     fontWeight: "500",
+  },
+  loadingText: {
+    color: "#64748B",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  modalRoot: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
+  modalClose: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#3B82F6",
+  },
+  modalScroll: {
+    flex: 1,
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+  },
+  modalItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  modalItemBody: {
+    flex: 1,
+  },
+  modalItemTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1E293B",
+  },
+  modalItemMeta: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 4,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  emptyText: {
+    color: "#64748B",
+    fontSize: 16,
   },
 });

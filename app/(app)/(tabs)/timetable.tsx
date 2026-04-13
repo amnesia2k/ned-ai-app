@@ -48,14 +48,16 @@ export default function TimetableScreen() {
   const createActivity = useTimetableStore((state) => state.createActivity);
   const updateActivity = useTimetableStore((state) => state.updateActivity);
   const deleteActivity = useTimetableStore((state) => state.deleteActivity);
-  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(
+    null,
+  );
   const [name, setName] = useState("");
   const [dayOfWeek, setDayOfWeek] = useState<Weekday>("MONDAY");
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("09:00");
-  const [pickerTarget, setPickerTarget] = useState<"startTime" | "endTime" | null>(
-    null,
-  );
+  const [pickerTarget, setPickerTarget] = useState<
+    "startTime" | "endTime" | null
+  >(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -130,10 +132,7 @@ export default function TimetableScreen() {
     } catch {}
   }
 
-  function handleTimeChange(
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) {
+  function handleTimeChange(event: DateTimePickerEvent, selectedDate?: Date) {
     if (event.type === "dismissed" || !selectedDate || !pickerTarget) {
       setPickerTarget(null);
       return;
@@ -155,12 +154,12 @@ export default function TimetableScreen() {
       title="Timetable"
       onNewChat={() => {
         startFreshChat();
-        router.replace("/(app)");
+        router.replace("/");
       }}
     >
       <ScrollView
         className="flex-1 bg-slate-50"
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
       >
         <View className="rounded-3xl bg-white p-5">
           <Text className="text-lg font-semibold text-slate-900">
@@ -175,7 +174,8 @@ export default function TimetableScreen() {
             value={name}
             onChangeText={setName}
             placeholder="Activity Name"
-            className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900"
+            className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-base text-slate-900"
+            style={{ paddingHorizontal: 20 }}
           />
 
           <Text className="mt-5 text-xs font-bold uppercase tracking-widest text-slate-400">
@@ -221,7 +221,9 @@ export default function TimetableScreen() {
 
           {pickerTarget ? (
             <DateTimePicker
-              value={parseTime(pickerTarget === "startTime" ? startTime : endTime)}
+              value={parseTime(
+                pickerTarget === "startTime" ? startTime : endTime,
+              )}
               mode="time"
               is24Hour
               onChange={handleTimeChange}
