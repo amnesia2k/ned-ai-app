@@ -102,6 +102,11 @@ export type SendChatMessagePayload = {
   chatId?: string;
   content: string;
   documentId?: string;
+  document?: {
+    id: string;
+    title: string;
+    sourceType: string;
+  };
 };
 
 export type ServerAuthResponse = {

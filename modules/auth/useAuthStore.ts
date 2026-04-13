@@ -40,6 +40,7 @@ type AuthStore = AuthState & {
   signIn: (credentials: LoginCredentials) => Promise<void>;
   signUp: (credentials: SignupCredentials) => Promise<void>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<AuthUser>;
+  refreshProfile: (token: string) => Promise<void>;
   changePassword: (payload: ChangePasswordPayload) => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -233,6 +234,22 @@ export const useAuthStore = create<AuthStore>()(
           }
 
           throw error;
+        }
+      },
+      refreshProfile: async (token) => {
+        set({ status: "loading", errorMessage: null });
+
+        try {
+          const response = await AuthApi.getCurrentUser(token);
+          applyAuthenticatedSession(set, {
+            accessToken: token,
+            user: response.user,
+          });
+        } catch (error) {
+          set({
+            status: "error",
+            errorMessage: buildAuthErrorMessage(error),
+          });
         }
       },
       changePassword: async (payload) => {

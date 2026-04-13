@@ -1,10 +1,18 @@
 import { router } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
-import { Sparkles } from "lucide-react-native";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RotateCcw, Sparkles } from "lucide-react-native";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
+  ActivityIndicator,
   Keyboard,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -100,7 +108,9 @@ export default function HomeScreen() {
   const loadChats = useChatStore((state) => state.loadChats);
   const startFreshChat = useChatStore((state) => state.startFreshChat);
   const sendMessage = useChatStore((state) => state.sendMessage);
-  const contextUsageByChatId = useChatStore((state) => state.contextUsageByChatId);
+  const contextUsageByChatId = useChatStore(
+    (state) => state.contextUsageByChatId,
+  );
   const documents = useDocumentStore((state) => state.documents);
   const loadDocuments = useDocumentStore((state) => state.loadDocuments);
   const uploadDocument = useDocumentStore((state) => state.uploadDocument);
@@ -166,7 +176,6 @@ export default function HomeScreen() {
     ),
     [],
   );
-
 
   useEffect(() => {
     void loadChats();
@@ -314,9 +323,19 @@ export default function HomeScreen() {
     try {
       await sendMessage({
         content: trimmed,
-        ...(selectedDocument ? { documentId: selectedDocument.id } : {}),
+        ...(selectedDocument
+          ? {
+              documentId: selectedDocument.id,
+              document: {
+                id: selectedDocument.id,
+                title: selectedDocument.title,
+                sourceType: selectedDocument.sourceType,
+              },
+            }
+          : {}),
       });
       setComposerText("");
+      setSelectedDocument(null);
       setHelperState(null);
       setForceSuggestionOpen(false);
     } catch {
@@ -433,9 +452,6 @@ export default function HomeScreen() {
                   <Text style={styles.welcomeText}>
                     What would you like to work on today?
                   </Text>
-
-
-
                 </View>
               </TouchableWithoutFeedback>
             )}
@@ -462,7 +478,9 @@ export default function HomeScreen() {
             documentSuggestions={suggestionResults}
             documentSuggestionStatus={documentSuggestionStatus}
             onSelectDocument={handleSelectDocument}
-            contextUsage={activeThreadId ? contextUsageByChatId[activeThreadId] ?? 0 : 0}
+            contextUsage={
+              activeThreadId ? (contextUsageByChatId[activeThreadId] ?? 0) : 0
+            }
           />
         </View>
       </KeyboardScreenView>
@@ -480,13 +498,39 @@ export default function HomeScreen() {
         <View style={styles.modalRoot}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>History</Text>
-            <TouchableOpacity onPress={handleCloseHistory}>
-              <Text style={styles.modalClose}>Done</Text>
+            <TouchableOpacity
+              onPress={() => {
+                if (token) {
+                  void loadChats(token);
+                }
+              }}
+              activeOpacity={0.7}
+              style={styles.modalHeaderButton}
+              disabled={status === "loading"}
+            >
+              {status === "loading" ? (
+                <ActivityIndicator size="small" color="#3B82F6" />
+              ) : (
+                <RotateCcw size={16} color="#3B82F6" />
+              )}
+              <Text style={styles.modalClose}>
+                {status === "loading" ? "Refreshing..." : "Refresh"}
+              </Text>
             </TouchableOpacity>
           </View>
           <BottomSheetScrollView
             style={styles.modalScroll}
             contentContainerStyle={styles.modalContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={status === "loading"}
+                onRefresh={() => {
+                  if (token) {
+                    void loadChats(token);
+                  }
+                }}
+              />
+            }
           >
             {threads.length === 0 ? (
               <View style={styles.emptyState}>
@@ -604,6 +648,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#3B82F6",
+    marginLeft: 6,
+  },
+  modalHeaderButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 9999,
   },
   modalScroll: {
     flex: 1,

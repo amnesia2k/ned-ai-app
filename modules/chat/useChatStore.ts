@@ -262,6 +262,7 @@ export const useChatStore = create<ChatStore>()(
           createdAt: new Date(timestamp).toISOString(),
         });
         (optimisticUserMessage as any).documentId = payload.documentId;
+        (optimisticUserMessage as any).document = payload.document;
 
         const optimisticAssistantMessage = createOptimisticMessage({
           id: `temp-assistant-${timestamp}`,

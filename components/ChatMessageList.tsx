@@ -67,7 +67,8 @@ export function ChatMessageList({ messages }: Props) {
                 <View
                   style={[
                     styles.userBubble,
-                    message.deliveryState === "failed" && styles.failedUserBubble,
+                    message.deliveryState === "failed" &&
+                      styles.failedUserBubble,
                   ]}
                 >
                   <Text style={styles.userText}>{message.content}</Text>
@@ -77,7 +78,10 @@ export function ChatMessageList({ messages }: Props) {
                         <FileText size={14} color="#2563EB" strokeWidth={2.5} />
                       </View>
                       <View style={styles.attachedDocumentTextWrap}>
-                        <Text style={styles.attachedDocumentTitle} numberOfLines={1}>
+                        <Text
+                          style={styles.attachedDocumentTitle}
+                          numberOfLines={1}
+                        >
                           {message.document.title}
                         </Text>
                       </View>
@@ -99,14 +103,19 @@ export function ChatMessageList({ messages }: Props) {
                   ) : (
                     <MarkdownMessage content={message.content} />
                   )}
-                  {assistantStatus ? (
-                    <Text style={styles.assistantStatus}>{assistantStatus}</Text>
+                  {assistantStatus &&
+                  (message.sources?.length || message.usedGeneralKnowledge) ? (
+                    <Text style={styles.assistantStatus}>
+                      {assistantStatus}
+                    </Text>
                   ) : null}
                   {message.sources?.length ? (
                     <View style={styles.sourcesCard}>
                       {message.sources.map((source, index) => (
                         <View key={`${message.id}-${index}`}>
-                          <Text style={styles.sourceSubject}>{source.subject}</Text>
+                          <Text style={styles.sourceSubject}>
+                            {source.subject}
+                          </Text>
                           <Text style={styles.sourceLesson}>
                             {source.lessonTitle}
                           </Text>
@@ -215,6 +224,11 @@ const styles = StyleSheet.create({
     color: "#334155",
     fontSize: 13,
     marginTop: 2,
+  },
+  sourcePath: {
+    color: "#64748B",
+    fontSize: 11,
+    marginTop: 4,
   },
   attachedDocument: {
     flexDirection: "row",

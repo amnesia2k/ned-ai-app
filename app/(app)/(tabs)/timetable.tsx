@@ -3,7 +3,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 
 import { AppShell } from "@/components/AppShell";
 import { useAuthStore } from "@/modules/auth/useAuthStore";
@@ -160,6 +160,16 @@ export default function TimetableScreen() {
       <ScrollView
         className="flex-1 bg-slate-50"
         contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={status === "loading"}
+            onRefresh={() => {
+              if (token) {
+                void loadActivities(token);
+              }
+            }}
+          />
+        }
       >
         <View className="rounded-3xl bg-white p-5">
           <Text className="text-lg font-semibold text-slate-900">

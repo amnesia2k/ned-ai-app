@@ -39,6 +39,7 @@ export default function KnowledgeVaultScreen() {
   const loadDocuments = useDocumentStore((state) => state.loadDocuments);
   const uploadDocument = useDocumentStore((state) => state.uploadDocument);
   const deleteDocument = useDocumentStore((state) => state.deleteDocument);
+  const uploadProgress = useDocumentStore((state) => state.uploadProgress);
 
   const {
     showRationale,
@@ -141,10 +142,28 @@ export default function KnowledgeVaultScreen() {
           onPress={() => {
             void handleUpload();
           }}
-          className="mt-4 items-center rounded-2xl bg-blue-600 px-4 py-4"
+          disabled={status === "uploading"}
+          className={`mt-4 overflow-hidden rounded-2xl px-4 py-4 ${
+            status === "uploading" ? "bg-slate-200" : "bg-blue-600"
+          }`}
         >
-          <Text className="text-base font-semibold text-white">
-            {status === "uploading" ? "Uploading..." : "Upload File"}
+          {status === "uploading" && (
+            <View
+              style={{ width: `${uploadProgress}%` }}
+              className="absolute bottom-0 left-0 top-0 bg-blue-600"
+            />
+          )}
+          <Text
+            className="text-center text-base font-semibold text-white"
+            style={
+              status === "uploading"
+                ? { textShadowColor: "rgba(0,0,0,0.2)", textShadowRadius: 2 }
+                : undefined
+            }
+          >
+            {status === "uploading"
+              ? `Uploading ${uploadProgress}%`
+              : "Upload File"}
           </Text>
         </Pressable>
 

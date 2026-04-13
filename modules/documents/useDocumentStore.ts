@@ -13,6 +13,7 @@ import type { DocumentQuota, DocumentSummary } from "@/modules/contracts";
 type DocumentStore = {
   hydrated: boolean;
   status: "idle" | "loading" | "uploading" | "error";
+  uploadProgress: number;
   errorMessage: string | null;
   documents: DocumentSummary[];
   quota: DocumentQuota | null;
@@ -92,6 +93,7 @@ export const useDocumentStore = create<DocumentStore>()(
     (set, get) => ({
       hydrated: false,
       status: "idle",
+      uploadProgress: 0,
       errorMessage: null,
       documents: [],
       quota: null,
@@ -123,7 +125,7 @@ export const useDocumentStore = create<DocumentStore>()(
         }
       },
       uploadDocument: async (token, file) => {
-        set({ status: "uploading", errorMessage: null });
+        set({ status: "uploading", uploadProgress: 0, errorMessage: null });
 
         try {
           const uploadFile = await buildUploadFile(file);
@@ -133,11 +135,18 @@ export const useDocumentStore = create<DocumentStore>()(
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            onUploadProgress: (p) => {
+              // Ensure we extract the percentage number from the progress object
+              const progressCount = typeof p === 'number' ? p : (p as any).progress;
+              set({ uploadProgress: Math.round(progressCount || 0) });
+            },
           });
           await get().loadDocuments(token);
+          set({ uploadProgress: 0 });
         } catch (error) {
           set({
             status: "error",
+            uploadProgress: 0,
             errorMessage: getErrorMessage(error),
           });
           throw error;

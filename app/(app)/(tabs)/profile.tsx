@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -70,6 +71,8 @@ export default function ProfileScreen() {
   const clearError = useAuthStore((state) => state.clearError);
   const errorMessage = useAuthStore((state) => state.errorMessage);
   const status = useAuthStore((state) => state.status);
+  const refreshProfile = useAuthStore((state) => state.refreshProfile);
+  const token = useAuthStore((state) => state.accessToken);
   const clearChatHistory = useChatStore((state) => state.clearChatHistory);
   const startFreshChat = useChatStore((state) => state.startFreshChat);
   const [fullName, setFullName] = useState("");
@@ -211,6 +214,16 @@ export default function ProfileScreen() {
       <ScrollView
         className="flex-1 bg-slate-50"
         contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={status === "loading"}
+            onRefresh={() => {
+              if (token) {
+                void refreshProfile(token);
+              }
+            }}
+          />
+        }
       >
         <Section title="Identity">
           <TextField
