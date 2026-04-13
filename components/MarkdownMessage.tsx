@@ -58,8 +58,20 @@ function escapeHtml(value: string) {
     .replaceAll(">", "&gt;");
 }
 
+function sanitizeHtmlTags(value: string) {
+  // Replace <br> with a space or marker if inside a table, but for now 
+  // let's try a simple newline and see if table layout holds.
+  // Actually, standard markdown tables don't support newlines.
+  // We'll use a marker to maintain the line and deal with it in rendering if possible,
+  // but for now, let's just use a space to avoid breaking the table structure.
+  return value.replace(/<br\s*\/?>/gi, " ");
+}
+
 export function MarkdownMessage({ content }: Props) {
-  const segments = splitContent(content);
+  // We sanitize ONLY after splitting if we want to be safe, 
+  // or we do it globally but care about the table structure.
+  const sanitizedContent = sanitizeHtmlTags(content);
+  const segments = splitContent(sanitizedContent);
 
   return (
     <View>
@@ -191,9 +203,41 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 16,
     backgroundColor: "#E2E8F0",
+    height: 1,
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 8,
+    marginVertical: 8,
+    overflow: "hidden",
+  },
+  thead: {
+    backgroundColor: "#F1F5F9",
+    borderBottomWidth: 2,
+    borderBottomColor: "#CBD5E1",
+  },
+  tbody: {},
+  tr: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  th: {
+    flex: 1,
+    padding: 12,
+    fontWeight: "700",
+    color: "#0F172A",
+    fontSize: 14,
+  },
+  td: {
+    flex: 1,
+    padding: 12,
+    color: "#334155",
+    fontSize: 14,
   },
   mathWrap: {
-    marginBottom: 12,
+    marginVertical: 8,
     borderRadius: 12,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
@@ -201,6 +245,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   mathFrame: {
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "transparent",
+    height: 40,
   },
 });
