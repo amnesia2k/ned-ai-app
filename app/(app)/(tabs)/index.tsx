@@ -100,6 +100,7 @@ export default function HomeScreen() {
   const loadChats = useChatStore((state) => state.loadChats);
   const startFreshChat = useChatStore((state) => state.startFreshChat);
   const sendMessage = useChatStore((state) => state.sendMessage);
+  const contextUsageByChatId = useChatStore((state) => state.contextUsageByChatId);
   const documents = useDocumentStore((state) => state.documents);
   const loadDocuments = useDocumentStore((state) => state.loadDocuments);
   const uploadDocument = useDocumentStore((state) => state.uploadDocument);
@@ -461,6 +462,7 @@ export default function HomeScreen() {
             documentSuggestions={suggestionResults}
             documentSuggestionStatus={documentSuggestionStatus}
             onSelectDocument={handleSelectDocument}
+            contextUsage={activeThreadId ? contextUsageByChatId[activeThreadId] ?? 0 : 0}
           />
         </View>
       </KeyboardScreenView>
@@ -574,11 +576,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  loadingText: {
-    color: "#64748B",
-    fontSize: 16,
-    fontWeight: "500",
   },
   loadingText: {
     color: "#64748B",

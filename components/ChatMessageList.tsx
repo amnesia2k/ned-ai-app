@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react-native";
+import { FileText, Sparkles } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -71,6 +71,18 @@ export function ChatMessageList({ messages }: Props) {
                   ]}
                 >
                   <Text style={styles.userText}>{message.content}</Text>
+                  {message.document ? (
+                    <View style={styles.attachedDocument}>
+                      <View style={styles.attachedDocumentIcon}>
+                        <FileText size={14} color="#2563EB" strokeWidth={2.5} />
+                      </View>
+                      <View style={styles.attachedDocumentTextWrap}>
+                        <Text style={styles.attachedDocumentTitle} numberOfLines={1}>
+                          {message.document.title}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
                 </View>
                 {message.deliveryState === "failed" ? (
                   <Text style={styles.failedLabel}>Not sent</Text>
@@ -204,9 +216,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  sourcePath: {
-    color: "#64748B",
+  attachedDocument: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  attachedDocumentIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  attachedDocumentTextWrap: {
+    flexShrink: 1,
+  },
+  attachedDocumentTitle: {
     fontSize: 12,
-    marginTop: 2,
+    fontWeight: "700",
+    color: "#1E3A8A",
   },
 });

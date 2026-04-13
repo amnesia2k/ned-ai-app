@@ -1,5 +1,6 @@
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleProp,
@@ -11,6 +12,8 @@ import {
   ViewStyle,
 } from "react-native";
 import { ArrowUp, FileText, Plus, X } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Circle, Svg } from "react-native-svg";
 
 import type { DocumentSummary } from "@/modules/contracts";
 
@@ -31,6 +34,7 @@ type Props = {
   documentSuggestions?: DocumentSummary[];
   documentSuggestionStatus?: DocumentSuggestionStatus;
   onSelectDocument?: (document: DocumentSummary) => void;
+  contextUsage?: number;
   containerStyle?: StyleProp<ViewStyle>;
 };
 
@@ -72,13 +76,23 @@ export function ChatInput({
   documentSuggestions = [],
   documentSuggestionStatus = "idle",
   onSelectDocument,
+  contextUsage = 0,
   containerStyle,
 }: Props) {
   const hasSendableText = value.trim().length > 0 && !disabled;
   const hasSuggestions = documentSuggestions.length > 0;
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.wrapper, containerStyle]}>
+    <View
+      style={[
+        styles.wrapper,
+        {
+          paddingBottom: Math.max(insets.bottom, 16),
+        },
+        containerStyle,
+      ]}
+    >
       {selectedDocument ? (
         <View style={styles.selectedDocumentChip}>
           <View style={styles.selectedDocumentMeta}>
@@ -208,30 +222,72 @@ export function ChatInput({
             editable={!disabled}
           />
 
-          <TouchableOpacity
-            activeOpacity={0.7}
-            style={[
-              styles.sendButton,
-              {
-                backgroundColor: hasSendableText ? "#0F172A" : "#CBD5E1",
-              },
-            ]}
-            onPress={onSend}
-            disabled={!hasSendableText}
-          >
-            <ArrowUp size={20} color="white" strokeWidth={3} />
-          </TouchableOpacity>
+            <ContextUsageIndicator usage={contextUsage} />
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[
+                styles.sendButton,
+                {
+                  backgroundColor: hasSendableText ? "#0F172A" : "#CBD5E1",
+                },
+              ]}
+              onPress={onSend}
+              disabled={!hasSendableText}
+            >
+              <ArrowUp size={20} color="white" strokeWidth={3} />
+            </TouchableOpacity>
         </View>
       </View>
     </View>
   );
 }
 
+const ContextUsageIndicator = ({ usage }: { usage: number }) => {
+  const size = 32;
+  const strokeWidth = 3;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (usage / 100) * circumference;
+
+  let color = "#10B981"; // Green
+  if (usage > 80) color = "#EF4444"; // Red
+  else if (usage > 50) color = "#F59E0B"; // Amber
+
+  return (
+    <View style={styles.indicatorContainer}>
+      <Svg width={size} height={size}>
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#E2E8F0"
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          fill="none"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </Svg>
+      <View style={styles.indicatorTextContainer}>
+        <Text style={[styles.indicatorText, { color }]}>{usage}</Text>
+      </View>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 2,
     backgroundColor: "white",
   },
   helperText: {
@@ -374,7 +430,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     gap: 12,
   },
   attachButton: {
@@ -387,27 +443,48 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  actionButtonContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  indicatorContainer: {
+    width: 32,
+    height: 32,
+    marginRight: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  indicatorTextContainer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  indicatorText: {
+    fontSize: 9,
+    fontWeight: "700",
+  },
   inputWrapper: {
     flex: 1,
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 24,
     paddingLeft: 16,
     paddingRight: 10,
-    paddingVertical: 10,
-    minHeight: 54,
+    paddingVertical: 8,
+    minHeight: 52,
   },
   input: {
     flex: 1,
     color: "#1E293B",
     fontSize: 16,
     maxHeight: 120,
-    paddingTop: 2,
-    paddingBottom: 2,
+    paddingTop: Platform.OS === "ios" ? 8 : 4,
+    paddingBottom: Platform.OS === "ios" ? 8 : 4,
     paddingRight: 12,
+    textAlignVertical: "center",
   },
   sendButton: {
     width: 34,

@@ -13,9 +13,9 @@ export function KeyboardScreenView({
   style,
   keyboardVerticalOffset,
 }: Props) {
-  const behavior = Platform.OS === "ios" ? "padding" : undefined;
+  const behavior = Platform.OS === "ios" ? "padding" : "height";
   // Default offset accounts for the custom Header in AppShell (approx 68px)
-  const defaultOffset = Platform.OS === "ios" ? 68 : 0;
+  const defaultOffset = Platform.OS === "ios" ? 80 : 0;
   const offset = keyboardVerticalOffset ?? defaultOffset;
 
   return (

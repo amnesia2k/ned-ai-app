@@ -25,6 +25,7 @@ type ChatStore = {
   draftMessages: ChatMessage[];
   messagesByChatId: Record<string, ChatMessage[]>;
   loadedChatIds: string[];
+  contextUsageByChatId: Record<string, number>;
   loadChats: () => Promise<void>;
   loadChatMessages: (chatId: string) => Promise<void>;
   selectThread: (threadId: string) => Promise<void>;
@@ -98,6 +99,7 @@ function createOptimisticMessage({
     role,
     content,
     createdAt,
+    documentId: (content as any).documentId, // dummy check or pass as obj
     deliveryState: "pending" as const,
   };
 }
@@ -139,6 +141,7 @@ export const useChatStore = create<ChatStore>()(
       draftMessages: [],
       messagesByChatId: {},
       loadedChatIds: [],
+      contextUsageByChatId: {},
       loadChats: async () => {
         set({
           status: "loading",
@@ -258,6 +261,8 @@ export const useChatStore = create<ChatStore>()(
           content: trimmed,
           createdAt: new Date(timestamp).toISOString(),
         });
+        (optimisticUserMessage as any).documentId = payload.documentId;
+
         const optimisticAssistantMessage = createOptimisticMessage({
           id: `temp-assistant-${timestamp}`,
           chatId: optimisticChatId,
@@ -335,6 +340,10 @@ export const useChatStore = create<ChatStore>()(
               loadedChatIds: state.loadedChatIds.includes(response.chat.id)
                 ? state.loadedChatIds
                 : [...state.loadedChatIds, response.chat.id],
+              contextUsageByChatId: {
+                ...state.contextUsageByChatId,
+                [response.chat.id]: response.contextUsage ?? 0,
+              },
               status: "idle",
               errorMessage: null,
             };

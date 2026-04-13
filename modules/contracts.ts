@@ -90,6 +90,12 @@ export type ChatMessage = {
   grounded?: boolean;
   usedGeneralKnowledge?: boolean;
   sources?: MessageSource[];
+  documentId?: string;
+  document?: {
+    id: string;
+    title: string;
+    sourceType: string;
+  };
 };
 
 export type SendChatMessagePayload = {
@@ -132,6 +138,7 @@ export type ServerSendMessageResponse = {
     usedGeneralKnowledge: boolean;
     sources: MessageSource[];
   };
+  contextUsage?: number;
 };
 
 export type ServerListDocumentsResponse = {
